@@ -1,0 +1,7 @@
+# A0 Frozen Artifacts — SHA256 Checksums
+# Generated on: 2026-01-27T01:32:27Z
+# Scope: A0 contract and execution invariants only
+# WARNING: Any change to these files invalidates these checksums
+
+ab43bca68c1607c3b140bb72a60497d068a8ccd41145f29b00eedcbfbeab852c  A0.md
+dd34f985ae3ca215378af9550d702a18fbe846c4d2b1186455e8a824577480da  a0_execution_invariants_v1.md
