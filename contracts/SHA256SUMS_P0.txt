@@ -1,0 +1,7 @@
+# P0 Frozen Artifacts — SHA256 Checksums
+# Generated on: 2026-01-27T00:00:00Z
+# Scope: P0 contract and execution profiles only
+# WARNING: Any change to these files invalidates these checksums
+
+e0c7a82fec6277072c9f8f64b3b2f5ff77f48672f747a4f3067fff91b5683e62  P0.md
+d621b126bc679c1abf0f3c21e9c8fe980ade91f45f04c17eeaebb340659c1d2c  p0_execution_profiles_v1.md
