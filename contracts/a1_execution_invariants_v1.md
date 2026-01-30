@@ -370,3 +370,13 @@ Ele define regras de governança mínimas para preservar validade auditável ao 
 Qualquer execução que viole estas invariantes compromete a garantia de que o A1 opera como um agente conservador que organiza evidências sem criar conhecimento clínico, inferir relações semânticas ou substituir julgamento humano.
 
 Este documento de invariantes é congelável. Qualquer alteração neste arquivo invalida execuções futuras que referenciem a versão anterior. Toda execução do A1 deve referenciar explicitamente o hash SHA-256 deste arquivo para garantir conformidade inequívoca com as invariantes aplicadas.
+
+---
+
+## Documento Congelado
+
+Este documento foi congelado como normativo.
+
+Qualquer alteração futura, por menor que seja, **EXIGE** a criação de uma nova versão (`a1_execution_invariants_v2.md`) com novo hash.
+
+Execuções do agente A1 **DEVEM** referenciar explicitamente o hash SHA-256 desta versão para serem consideradas válidas para auditoria.
