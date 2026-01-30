@@ -83,22 +83,23 @@ Toda execução válida do agente A1 **DEVE** registrar as seguintes informaçõ
 
 **Exemplo ilustrativo (não normativo):**
 
-Em uma implementação baseada em SQL com a estrutura descrita no contrato A1.md, a restrição semântica acima poderia ser implementada através de uma cláusula WHERE como:
+A restrição semântica acima poderia ser implementada através de uma lógica de filtragem que verifique:
 
-```sql
-WHERE status = 'approved'
-  AND reviewed_by IS NOT NULL
-  AND reviewed_at IS NOT NULL
+```
+FILTRAR evidências ONDE:
+  [approval_status] indica aprovação explícita
+  E [reviewer_identity] contém identificação do revisor
+  E [review_timestamp] registra momento da revisão
 ```
 
-Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sintaxe SQL específica não são obrigatórios. O que é obrigatório é a semântica: apenas evidências explicitamente aprovadas por revisão humana completa podem ser processadas.
+Este exemplo ilustra a lógica requerida usando placeholders semânticos que não correspondem a campos reais. Os nomes de atributos, estrutura de dados e sintaxe específica não são obrigatórios. O que é obrigatório é a semântica: apenas evidências explicitamente aprovadas por revisão humana completa podem ser processadas.
 
 ### 3.2 Proibição de processamento de dados não aprovados
 
-- O A1 **NUNCA** pode processar registros com `status = "pending"`.
-- O A1 **NUNCA** pode processar registros com `status = "rejected"`.
-- O A1 **NUNCA** pode processar registros com `reviewed_by IS NULL`.
-- O A1 **NUNCA** pode processar registros com `reviewed_at IS NULL`.
+- O A1 **NUNCA** pode processar evidências que aguardam aprovação humana.
+- O A1 **NUNCA** pode processar evidências que foram explicitamente rejeitadas por revisão humana.
+- O A1 **NUNCA** pode processar evidências sem atestado de identidade do revisor responsável.
+- O A1 **NUNCA** pode processar evidências sem registro temporal de revisão completa.
 
 ### 3.3 Proibição de acesso direto a chunks
 
@@ -271,7 +272,7 @@ Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sint
 
 ### 9.2 Incerteza deve ser explicitada
 
-- Agrupamentos com confiança abaixo do threshold **DEVEM** ser sinalizados como "baixa confiança, requer revisão".
+- Quando o perfil de execução define critérios de confiança, agrupamentos que não os satisfaçam **DEVEM** ser sinalizados como "baixa confiança, requer revisão".
 - Rótulos derivados de evidência única **DEVEM** ser marcados como "fonte única".
 - Conflitos identificados com baixa certeza **DEVEM** incluir nota "possível conflito, requer revisão humana".
 
