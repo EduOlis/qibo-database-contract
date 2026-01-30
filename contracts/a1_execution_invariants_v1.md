@@ -48,7 +48,7 @@ Toda execução válida do agente A1 **DEVE** registrar as seguintes informaçõ
 
 ### 2.1 Toda execução gera log
 
-- Toda execução do A1 **DEVE** gerar exatamente um registro de auditoria.
+- Toda execução válida do A1 **DEVE** gerar ao menos um registro primário de auditoria inequívoco.
 - O registro **DEVE** ser criado antes ou durante a execução, nunca após falha silenciosa.
 - A ausência de log invalida a execução, mesmo que output tenha sido produzido.
 
@@ -123,10 +123,10 @@ Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sint
 
 ### 4.2 Rastreabilidade obrigatória
 
-- Todo agrupamento **DEVE** referenciar explicitamente os IDs das evidências fonte via `evidence_ids`.
-- Todo rótulo provisório **DEVE** referenciar as evidências das quais foi derivado via `evidence_ids`.
-- Toda sinalização **DEVE** referenciar as evidências envolvidas via `evidence_id_a` e `evidence_id_b`.
-- Todo `evidence_id` referenciado **DEVE** existir em `kb_evidence_excerpts` e ter sido processado conforme invariante 3.1.
+- Todo agrupamento **DEVE** referenciar explicitamente identificadores inequívocos das evidências fonte aprovadas por A0.
+- Todo rótulo provisório **DEVE** referenciar identificadores inequívocos das evidências das quais foi derivado.
+- Toda sinalização **DEVE** referenciar identificadores inequívocos das evidências envolvidas.
+- Todos os identificadores referenciados **DEVEM** corresponder a evidências que foram processadas conforme invariante 3.1.
 
 ### 4.3 Proibição de escrita em tabelas finais
 
@@ -208,19 +208,21 @@ Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sint
 
 ## 7. Invariantes de Confidence Level
 
-### 7.1 Natureza computacional obrigatória
+### 7.1 Natureza opcional e não normativa
 
-- O campo `confidence_level` **DEVE** medir exclusivamente consistência mecânica/computacional do agrupamento textual.
-- O campo `confidence_level` **NÃO** representa:
+- O atributo `confidence_level` é **opcional** e não constitui requisito de validade da execução.
+- Outputs sem `confidence_level` são válidos e auditáveis.
+- Quando presente, `confidence_level` representa exclusivamente consistência mecânica/computacional do agrupamento textual.
+- O atributo `confidence_level` **NÃO** representa:
   - Validade clínica
   - Relevância científica
   - Força conceitual
   - Correção epistemológica
   - Aprovação semântica
 
-### 7.2 Determinismo obrigatório
+### 7.2 Determinismo quando presente
 
-- O cálculo de `confidence_level` **DEVE** ser:
+- Quando `confidence_level` estiver presente, seu cálculo **DEVE** ser:
   - Determinístico (mesmas entradas → mesmo resultado)
   - Monotônico em relação à sobreposição textual literal
   - Reproduzível dado o mesmo input textual bruto
@@ -231,7 +233,7 @@ Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sint
 
 ### 7.3 Proibição de uso downstream
 
-- O campo `confidence_level` **NÃO PODE** ser utilizado para:
+- O atributo `confidence_level` **NÃO PODE** ser utilizado para:
   - Ordenação de relevância clínica
   - Priorização de revisão humana baseada em importância clínica
   - Tomada de decisão automática
@@ -365,3 +367,5 @@ Este documento é complementar ao contrato A1.md e **não modifica o escopo epis
 Ele define regras de governança mínimas para preservar validade auditável ao longo do tempo, garantindo que execuções do A1 permaneçam rastreáveis, verificáveis e estritamente conservadoras, independentemente de mudanças futuras na implementação ou infraestrutura.
 
 Qualquer execução que viole estas invariantes compromete a garantia de que o A1 opera como um agente conservador que organiza evidências sem criar conhecimento clínico, inferir relações semânticas ou substituir julgamento humano.
+
+Este documento de invariantes é congelável. Qualquer alteração neste arquivo invalida execuções futuras que referenciem a versão anterior. Toda execução do A1 deve referenciar explicitamente o hash SHA-256 deste arquivo para garantir conformidade inequívoca com as invariantes aplicadas.
