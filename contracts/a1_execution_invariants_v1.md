@@ -30,10 +30,11 @@ Toda execução válida do agente A1 **DEVE** registrar as seguintes informaçõ
 - Este valor identifica o modelo de operação conservador do agente.
 - Este valor **NÃO PODE** ser omitido, alterado ou substituído.
 
-### 1.4 Obrigatoriedade de contract_version
+### 1.4 Obrigatoriedade de referência ao contrato
 
-- Todo registro de log gerado pelo A1 **DEVE** conter explicitamente o campo `contract_version` com o valor exato `"A1 v1.1"`.
-- Este valor **NÃO PODE** ser omitido ou alterado.
+- Todo registro de log gerado pelo A1 **DEVE** referenciar explicitamente o hash SHA-256 do contrato A1 vigente no momento da execução.
+- Esta referência **NÃO PODE** ser omitida.
+- A referência **DEVE** permitir auditoria retrospectiva inequívoca da versão do contrato aplicada.
 
 ### 1.5 Obrigatoriedade de agent_version
 
@@ -54,12 +55,12 @@ Toda execução válida do agente A1 **DEVE** registrar as seguintes informaçõ
 ### 2.2 Logs sem output são permitidos
 
 - É válido que uma execução do A1 não produza nenhum agrupamento, rótulo ou sinalização.
-- O log **DEVE** registrar contadores zerados (`output_clusters_count = 0`, etc.) neste caso.
+- O log **DEVE** registrar contadores zerados para os outputs intermediários do A1 neste caso.
 - Execuções com zero outputs **NÃO** são consideradas falhas, desde que o log esteja presente.
 
 ### 2.3 Output sem log é proibido
 
-- Se existirem registros em `kb_evidence_clusters`, `kb_provisional_labels` ou `kb_evidence_conflicts` para uma execução, **DEVE** existir o log correspondente.
+- Se existirem artefatos de saída intermediários atribuídos a uma execução do A1, **DEVE** existir o log correspondente.
 - Registros órfãos (sem log de auditoria) indicam violação de governança.
 - Tais registros **NÃO** podem ser considerados válidos para fins de auditoria epistemológica.
 
@@ -67,9 +68,22 @@ Toda execução válida do agente A1 **DEVE** registrar as seguintes informaçõ
 
 ## 3. Invariantes de Input
 
-### 3.1 Cláusula WHERE obrigatória
+### 3.1 Restrição de input a evidências explicitamente aprovadas
 
-- Toda leitura de `kb_evidence_excerpts` pelo A1 **DEVE** aplicar explicitamente a seguinte cláusula SQL (ou equivalente funcional):
+**Regra semântica normativa (obrigatória):**
+
+- O A1 **DEVE** processar exclusivamente evidências que tenham sido explicitamente aprovadas por revisão humana completa.
+- A aprovação humana **DEVE** ser verificada através de metadados que atestem:
+  - Status de aprovação explícito
+  - Identidade do revisor responsável
+  - Timestamp da revisão
+- A verificação **DEVE** ocorrer na camada de acesso aos dados.
+- **NÃO** é permitido recuperar evidências não aprovadas e aplicar filtragem posterior em código de aplicação.
+- Implementações que realizem filtragem fora da camada de acesso aos dados constituem **violação explícita de contrato**.
+
+**Exemplo ilustrativo (não normativo):**
+
+Em uma implementação baseada em SQL com a estrutura descrita no contrato A1.md, a restrição semântica acima poderia ser implementada através de uma cláusula WHERE como:
 
 ```sql
 WHERE status = 'approved'
@@ -77,9 +91,7 @@ WHERE status = 'approved'
   AND reviewed_at IS NOT NULL
 ```
 
-- Esta cláusula **DEVE** ser aplicada na query de leitura do banco de dados.
-- **NÃO** é permitido ler registros sem esta cláusula e aplicar filtragem equivalente posteriormente em código de aplicação.
-- Implementações que realizem filtragem fora da query constituem **violação explícita de contrato**.
+Este exemplo ilustra uma possível implementação. Os nomes de colunas e a sintaxe SQL específica não são obrigatórios. O que é obrigatório é a semântica: apenas evidências explicitamente aprovadas por revisão humana completa podem ser processadas.
 
 ### 3.2 Proibição de processamento de dados não aprovados
 
@@ -300,13 +312,12 @@ Um auditor técnico ou epistemológico **DEVE** conseguir responder, consultando
 
 Qualquer execução do A1 que:
 
-- Não registre `profile_id`, `agent_name`, `agent_model`, ou `contract_version`, ou
+- Não registre `profile_id`, `agent_name`, `agent_model`, ou referência ao hash do contrato, ou
 - Registre um `profile_id` inexistente ou não documentado, ou
 - Não gere log de auditoria, ou
-- Processe evidências com `status != "approved"`, ou
-- Processe evidências com `reviewed_by IS NULL` ou `reviewed_at IS NULL`, ou
-- Leia de `kb_evidence_excerpts` sem a cláusula WHERE obrigatória, ou
-- Aplique filtragem de status fora da query SQL, ou
+- Processe evidências que não foram explicitamente aprovadas por revisão humana completa, ou
+- Processe evidências sem verificar metadados de aprovação, identidade do revisor e timestamp de revisão, ou
+- Aplique filtragem de aprovação fora da camada de acesso aos dados, ou
 - Acesse diretamente `kb_raw_chunks`, ou
 - Escreva em tabelas `tcm_*` ou entidades clínicas finais, ou
 - Altere `status`, `reviewed_by`, `reviewed_at` de evidências, ou
