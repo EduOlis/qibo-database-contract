@@ -380,3 +380,14 @@ Este documento foi congelado como normativo.
 Qualquer alteração futura, por menor que seja, **EXIGE** a criação de uma nova versão (`a1_execution_invariants_v2.md`) com novo hash.
 
 Execuções do agente A1 **DEVEM** referenciar explicitamente o hash SHA-256 desta versão para serem consideradas válidas para auditoria.
+
+---
+
+## Hash Criptográfico (SHA-256)
+
+Este documento está criptograficamente congelado.
+
+SHA-256: ed4a2726bc07b30b8bf564cc2f1f8d66589b94a8a1953a77cbad1ac1d07b7277
+Generated at: 2026-01-30T23:59:50Z
+
+Qualquer alteração neste arquivo invalida este hash e EXIGE a criação de uma nova versão (`a1_execution_invariants_v2.md`) com novo hash.
