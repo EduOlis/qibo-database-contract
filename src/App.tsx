@@ -1,19 +1,34 @@
 import { useState } from 'react'
 import InputForm from './components/InputForm'
 import ResultScreen from './components/ResultScreen'
+import { supabase } from './lib/supabase'
 
 function App() {
   const [submitted, setSubmitted] = useState(false)
-  const [inputData, setInputData] = useState('')
+  const [caseData, setCaseData] = useState({ description: '', additionalNotes: '' })
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (data: string) => {
-    setInputData(data)
-    setSubmitted(true)
+  const handleSubmit = async (description: string, additionalNotes: string) => {
+    setLoading(true)
+
+    const { error } = await supabase
+      .from('cases')
+      .insert({
+        description,
+        additional_notes: additionalNotes || null
+      })
+
+    setLoading(false)
+
+    if (!error) {
+      setCaseData({ description, additionalNotes })
+      setSubmitted(true)
+    }
   }
 
   const handleReset = () => {
     setSubmitted(false)
-    setInputData('')
+    setCaseData({ description: '', additionalNotes: '' })
   }
 
   return (
@@ -21,8 +36,9 @@ function App() {
       {!submitted ? (
         <InputForm onSubmit={handleSubmit} />
       ) : (
-        <ResultScreen data={inputData} onReset={handleReset} />
+        <ResultScreen data={`Descrição: ${caseData.description}\n\nObservações: ${caseData.additionalNotes || 'Nenhuma'}`} onReset={handleReset} />
       )}
+      {loading && <div style={{ marginTop: '10px' }}>Processando...</div>}
     </div>
   )
 }
