@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import HomePage from './components/HomePage'
 import InputForm from './components/InputForm'
 import ResultScreen from './components/ResultScreen'
+import CaseList from './components/CaseList'
 import { supabase } from './lib/supabase'
 
+type Page = 'home' | 'new-case' | 'case-list' | 'result'
+
 function App() {
-  const [submitted, setSubmitted] = useState(false)
+  const [currentPage, setCurrentPage] = useState<Page>('home')
   const [caseData, setCaseData] = useState({ description: '', additionalNotes: '' })
   const [loading, setLoading] = useState(false)
 
@@ -22,23 +26,55 @@ function App() {
 
     if (!error) {
       setCaseData({ description, additionalNotes })
-      setSubmitted(true)
+      setCurrentPage('result')
     }
   }
 
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page as Page)
+  }
+
   const handleReset = () => {
-    setSubmitted(false)
+    setCurrentPage('home')
     setCaseData({ description: '', additionalNotes: '' })
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      {!submitted ? (
-        <InputForm onSubmit={handleSubmit} />
-      ) : (
-        <ResultScreen data={`Descrição: ${caseData.description}\n\nObservações: ${caseData.additionalNotes || 'Nenhuma'}`} onReset={handleReset} />
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#f3f4f6',
+      padding: '20px'
+    }}>
+      {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
+
+      {currentPage === 'new-case' && (
+        <InputForm onSubmit={handleSubmit} onBack={() => handleNavigate('home')} />
       )}
-      {loading && <div style={{ marginTop: '10px' }}>Processando...</div>}
+
+      {currentPage === 'case-list' && <CaseList onNavigate={handleNavigate} />}
+
+      {currentPage === 'result' && (
+        <ResultScreen
+          data={`Descrição: ${caseData.description}\n\nObservações: ${caseData.additionalNotes || 'Nenhuma'}`}
+          onReset={handleReset}
+        />
+      )}
+
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '20px 40px',
+          borderRadius: '8px',
+          fontSize: '18px'
+        }}>
+          Processando...
+        </div>
+      )}
     </div>
   )
 }
