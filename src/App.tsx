@@ -3,29 +3,34 @@ import HomePage from './components/HomePage'
 import InputForm from './components/InputForm'
 import ResultScreen from './components/ResultScreen'
 import CaseList from './components/CaseList'
+import A1Output from './components/A1Output'
 import { supabase } from './lib/supabase'
 
-type Page = 'home' | 'new-case' | 'case-list' | 'result'
+type Page = 'home' | 'new-case' | 'case-list' | 'a1-output' | 'result'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [caseData, setCaseData] = useState({ description: '', additionalNotes: '' })
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (description: string, additionalNotes: string) => {
+  const handleSubmit = (description: string, additionalNotes: string) => {
+    setCaseData({ description, additionalNotes })
+    setCurrentPage('a1-output')
+  }
+
+  const handleA1Continue = async () => {
     setLoading(true)
 
     const { error } = await supabase
       .from('cases')
       .insert({
-        description,
-        additional_notes: additionalNotes || null
+        description: caseData.description,
+        additional_notes: caseData.additionalNotes || null
       })
 
     setLoading(false)
 
     if (!error) {
-      setCaseData({ description, additionalNotes })
       setCurrentPage('result')
     }
   }
@@ -52,6 +57,15 @@ function App() {
       )}
 
       {currentPage === 'case-list' && <CaseList onNavigate={handleNavigate} />}
+
+      {currentPage === 'a1-output' && (
+        <A1Output
+          description={caseData.description}
+          additionalNotes={caseData.additionalNotes}
+          onContinue={handleA1Continue}
+          onBack={() => handleNavigate('new-case')}
+        />
+      )}
 
       {currentPage === 'result' && (
         <ResultScreen
