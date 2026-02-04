@@ -5,9 +5,10 @@ import ResultScreen from './components/ResultScreen'
 import CaseList from './components/CaseList'
 import A1Output from './components/A1Output'
 import A2Output from './components/A2Output'
+import FinalReviewScreen from './components/FinalReviewScreen'
 import { supabase } from './lib/supabase'
 
-type Page = 'home' | 'new-case' | 'case-list' | 'a1-output' | 'a2-output' | 'result'
+type Page = 'home' | 'new-case' | 'case-list' | 'a1-output' | 'a2-output' | 'final-review' | 'result'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
@@ -23,14 +24,19 @@ function App() {
     setCurrentPage('a2-output')
   }
 
-  const handleA2Continue = async () => {
+  const handleA2Continue = () => {
+    setCurrentPage('final-review')
+  }
+
+  const handleFinalConfirm = async (humanReview: string) => {
     setLoading(true)
 
     const { error } = await supabase
       .from('cases')
       .insert({
         description: caseData.description,
-        additional_notes: caseData.additionalNotes || null
+        additional_notes: caseData.additionalNotes || null,
+        human_review: humanReview
       })
 
     setLoading(false)
@@ -78,6 +84,16 @@ function App() {
           additionalNotes={caseData.additionalNotes}
           onContinue={handleA2Continue}
           onBack={() => handleNavigate('a1-output')}
+        />
+      )}
+
+      {currentPage === 'final-review' && (
+        <FinalReviewScreen
+          description={caseData.description}
+          additionalNotes={caseData.additionalNotes}
+          onConfirm={handleFinalConfirm}
+          onBack={() => handleNavigate('a2-output')}
+          loading={loading}
         />
       )}
 
