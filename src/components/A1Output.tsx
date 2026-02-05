@@ -5,14 +5,62 @@ interface A1OutputProps {
   onBack: () => void;
 }
 
+interface TextBlock {
+  id: string;
+  text: string;
+  type: 'paragraph' | 'sentence';
+}
+
 function A1Output({ description, additionalNotes, onContinue, onBack }: A1OutputProps) {
-  const formatTextInParagraphs = (text: string) => {
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    return lines;
+  const structureText = (text: string, prefix: string): TextBlock[] => {
+    const blocks: TextBlock[] = [];
+    let blockCounter = 1;
+
+    const paragraphs = text.split('\n').filter(line => line.trim().length > 0);
+
+    paragraphs.forEach((paragraph) => {
+      const sentences = paragraph
+        .split(/([.!?]+\s+)/)
+        .reduce<string[]>((acc, part, idx, arr) => {
+          if (idx % 2 === 0 && part.trim()) {
+            const nextPart = arr[idx + 1] || '';
+            acc.push((part + nextPart).trim());
+          }
+          return acc;
+        }, [])
+        .filter(s => s.length > 0);
+
+      if (sentences.length === 0 && paragraph.trim()) {
+        blocks.push({
+          id: `${prefix}-BLOCO-${String(blockCounter).padStart(2, '0')}`,
+          text: paragraph.trim(),
+          type: 'paragraph'
+        });
+        blockCounter++;
+      } else if (sentences.length === 1) {
+        blocks.push({
+          id: `${prefix}-BLOCO-${String(blockCounter).padStart(2, '0')}`,
+          text: sentences[0],
+          type: 'paragraph'
+        });
+        blockCounter++;
+      } else {
+        sentences.forEach((sentence) => {
+          blocks.push({
+            id: `${prefix}-BLOCO-${String(blockCounter).padStart(2, '0')}`,
+            text: sentence,
+            type: 'sentence'
+          });
+          blockCounter++;
+        });
+      }
+    });
+
+    return blocks;
   };
 
-  const descriptionParagraphs = formatTextInParagraphs(description);
-  const notesParagraphs = additionalNotes ? formatTextInParagraphs(additionalNotes) : [];
+  const descriptionBlocks = structureText(description, 'A1-DESC');
+  const notesBlocks = additionalNotes ? structureText(additionalNotes, 'A1-NOTA') : [];
 
   return (
     <div style={{
@@ -53,7 +101,7 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
           color: '#92400e',
           margin: 0
         }}>
-          Esta é uma etapa de organização inicial. O texto abaixo foi estruturado em parágrafos, mas nenhuma interpretação ou validação clínica foi realizada.
+          Esta é uma etapa de organização formal. O texto foi reestruturado em unidades rastreáveis numeradas. Nenhuma palavra foi alterada, interpretada ou validada clinicamente.
         </p>
       </div>
 
@@ -76,23 +124,50 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
             color: '#374151',
             marginBottom: '12px'
           }}>
-            Descrição do caso:
+            Descrição do caso — Estruturação A1:
           </h4>
           <div style={{
             backgroundColor: '#f9fafb',
-            padding: '16px',
+            padding: '20px',
             borderRadius: '6px',
             border: '1px solid #e5e7eb'
           }}>
-            {descriptionParagraphs.map((paragraph, index) => (
-              <p key={index} style={{
-                color: '#1f2937',
-                lineHeight: '1.8',
-                marginBottom: descriptionParagraphs.length - 1 === index ? '0' : '16px',
-                fontSize: '15px'
+            {descriptionBlocks.map((block, index) => (
+              <div key={block.id} style={{
+                marginBottom: descriptionBlocks.length - 1 === index ? '0' : '16px',
+                paddingBottom: descriptionBlocks.length - 1 === index ? '0' : '16px',
+                borderBottom: descriptionBlocks.length - 1 === index ? 'none' : '1px solid #e5e7eb'
               }}>
-                {paragraph}
-              </p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}>
+                  <div style={{
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    fontFamily: 'monospace',
+                    minWidth: '110px',
+                    textAlign: 'center',
+                    flexShrink: 0
+                  }}>
+                    {block.id}
+                  </div>
+                  <p style={{
+                    color: '#1f2937',
+                    lineHeight: '1.8',
+                    margin: 0,
+                    fontSize: '15px',
+                    flex: 1
+                  }}>
+                    {block.text}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -105,23 +180,50 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
               color: '#374151',
               marginBottom: '12px'
             }}>
-              Observações adicionais:
+              Observações adicionais — Estruturação A1:
             </h4>
             <div style={{
               backgroundColor: '#f9fafb',
-              padding: '16px',
+              padding: '20px',
               borderRadius: '6px',
               border: '1px solid #e5e7eb'
             }}>
-              {notesParagraphs.map((paragraph, index) => (
-                <p key={index} style={{
-                  color: '#1f2937',
-                  lineHeight: '1.8',
-                  marginBottom: notesParagraphs.length - 1 === index ? '0' : '16px',
-                  fontSize: '15px'
+              {notesBlocks.map((block, index) => (
+                <div key={block.id} style={{
+                  marginBottom: notesBlocks.length - 1 === index ? '0' : '16px',
+                  paddingBottom: notesBlocks.length - 1 === index ? '0' : '16px',
+                  borderBottom: notesBlocks.length - 1 === index ? 'none' : '1px solid #e5e7eb'
                 }}>
-                  {paragraph}
-                </p>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      fontFamily: 'monospace',
+                      minWidth: '110px',
+                      textAlign: 'center',
+                      flexShrink: 0
+                    }}>
+                      {block.id}
+                    </div>
+                    <p style={{
+                      color: '#1f2937',
+                      lineHeight: '1.8',
+                      margin: 0,
+                      fontSize: '15px',
+                      flex: 1
+                    }}>
+                      {block.text}
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
