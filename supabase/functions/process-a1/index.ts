@@ -40,11 +40,41 @@ Deno.serve(async (req: Request) => {
 
   try {
     const startTime = Date.now();
-    const { text, prefix }: A1Request = await req.json();
+    let body;
+
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const { text, prefix } = body as A1Request;
 
     if (!text || text.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: "Text is required" }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    if (!prefix) {
+      return new Response(
+        JSON.stringify({ error: "Prefix is required" }),
         {
           status: 400,
           headers: {

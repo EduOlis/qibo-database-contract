@@ -54,10 +54,17 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
       });
 
       if (!descResponse.ok) {
-        throw new Error('Erro ao processar descrição');
+        const errorData = await descResponse.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'Erro ao processar descrição';
+        throw new Error(errorMessage);
       }
 
       const descData = await descResponse.json();
+
+      if (descData.error) {
+        throw new Error(descData.error);
+      }
+
       setDescriptionBlocks(descData.blocks);
       setAuditInfo(descData.audit);
 
@@ -74,10 +81,17 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
         });
 
         if (!notesResponse.ok) {
-          throw new Error('Erro ao processar observações');
+          const errorData = await notesResponse.json().catch(() => ({}));
+          const errorMessage = errorData.error || errorData.details || 'Erro ao processar observações';
+          throw new Error(errorMessage);
         }
 
         const notesData = await notesResponse.json();
+
+        if (notesData.error) {
+          throw new Error(notesData.error);
+        }
+
         setNotesBlocks(notesData.blocks);
       }
 
