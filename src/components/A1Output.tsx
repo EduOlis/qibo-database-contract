@@ -46,6 +46,7 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           text: description,
@@ -73,6 +74,7 @@ function A1Output({ description, additionalNotes, onContinue, onBack }: A1Output
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             text: additionalNotes,
