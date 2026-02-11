@@ -30,6 +30,116 @@ interface A1Response {
   };
 }
 
+interface LLMProvider {
+  name: string;
+  callAPI: (systemPrompt: string, userPrompt: string) => Promise<string>;
+}
+
+class GeminiProvider implements LLMProvider {
+  name = "gemini-1.5-pro";
+  private apiKey: string;
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async callAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: systemPrompt + "\n\n" + userPrompt }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 8192,
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    return result.candidates[0].content.parts[0].text;
+  }
+}
+
+class AnthropicProvider implements LLMProvider {
+  name = "claude-3-5-sonnet-20241022";
+  private apiKey: string;
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async callAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.apiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: this.name,
+        max_tokens: 4096,
+        temperature: 0,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Anthropic API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result.content[0].text;
+  }
+}
+
+function getLLMProvider(): LLMProvider | null {
+  const providerType = Deno.env.get("LLM_PROVIDER") || "gemini";
+
+  if (providerType === "gemini") {
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (apiKey) {
+      return new GeminiProvider(apiKey);
+    }
+  } else if (providerType === "anthropic") {
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (apiKey) {
+      return new AnthropicProvider(apiKey);
+    }
+  }
+
+  return null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -120,9 +230,9 @@ ${text}
 
 Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const llmProvider = getLLMProvider();
 
-    if (!anthropicApiKey) {
+    if (!llmProvider) {
       const fallbackBlocks = processTextFallback(text, prefix);
 
       return new Response(
@@ -130,7 +240,7 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
           blocks: fallbackBlocks,
           audit: {
             agent_name: "A1",
-            agent_model: "A1-α",
+            agent_model: "A1-α-fallback",
             agent_version: "1.0.0",
             contract_version: "A1 v1.1",
             execution_time_ms: Date.now() - startTime,
@@ -148,33 +258,7 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       );
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4096,
-        temperature: 0,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    const content = result.content[0].text;
+    const content = await llmProvider.callAPI(systemPrompt, userPrompt);
 
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -195,7 +279,7 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       blocks,
       audit: {
         agent_name: "A1",
-        agent_model: "A1-α",
+        agent_model: `A1-α (${llmProvider.name})`,
         agent_version: "1.0.0",
         contract_version: "A1 v1.1",
         execution_time_ms: executionTime,
