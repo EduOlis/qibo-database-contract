@@ -47,6 +47,7 @@ function IngestPage({ onBack }: IngestPageProps) {
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: formData,
@@ -67,6 +68,7 @@ function IngestPage({ onBack }: IngestPageProps) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ url }),
