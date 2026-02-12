@@ -5,20 +5,101 @@ interface IngestPageProps {
   onBack: () => void;
 }
 
+type InputMethod = 'pdf' | 'kindle' | 'url';
+
 function IngestPage({ onBack }: IngestPageProps) {
+  const [inputMethod, setInputMethod] = useState<InputMethod>('pdf');
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [year, setYear] = useState('');
   const [sourceType, setSourceType] = useState('book');
-  const [text, setText] = useState('');
   const [notes, setNotes] = useState('');
-  const [executionProfile, setExecutionProfile] = useState('p0-txt-basic-v1');
+  const [executionProfile, setExecutionProfile] = useState('p0-pdf-text-v1');
   const [processing, setProcessing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [url, setUrl] = useState('');
+  const [extractedText, setExtractedText] = useState('');
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!title) {
+        setTitle(file.name.replace(/\.[^/.]+$/, ''));
+      }
+    }
+  };
+
+  const handleExtractText = async () => {
+    setExtracting(true);
+    setError(null);
+    setExtractedText('');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Você precisa estar autenticado');
+      }
+
+      if (inputMethod === 'pdf' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text-pdf`;
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Erro ao extrair texto do PDF');
+        }
+
+        setExtractedText(data.text);
+      } else if (inputMethod === 'kindle' && selectedFile) {
+        const text = await selectedFile.text();
+        setExtractedText(text);
+      } else if (inputMethod === 'url' && url) {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text-url`;
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Erro ao extrair texto da URL');
+        }
+
+        setExtractedText(data.text);
+      }
+    } catch (err) {
+      console.error('Erro:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao extrair texto');
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!extractedText) {
+      setError('Por favor, extraia o texto primeiro');
+      return;
+    }
+
     setProcessing(true);
     setError(null);
     setResult(null);
@@ -43,7 +124,7 @@ function IngestPage({ onBack }: IngestPageProps) {
           sourceAuthor: author || undefined,
           sourceYear: year ? parseInt(year) : undefined,
           sourceType,
-          rawText: text,
+          rawText: extractedText,
           executionProfile,
           notes: notes || undefined,
         }),
@@ -121,7 +202,9 @@ function IngestPage({ onBack }: IngestPageProps) {
               setTitle('');
               setAuthor('');
               setYear('');
-              setText('');
+              setExtractedText('');
+              setSelectedFile(null);
+              setUrl('');
               setNotes('');
             }}
             style={{
@@ -310,62 +393,226 @@ function IngestPage({ onBack }: IngestPageProps) {
             </select>
           </div>
 
-          <div>
-            <label htmlFor="executionProfile" style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '6px',
-            }}>
-              Perfil de Execução
-            </label>
-            <select
-              id="executionProfile"
-              value={executionProfile}
-              onChange={(e) => setExecutionProfile(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                fontSize: '14px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-              }}
-            >
-              <option value="p0-txt-basic-v1">Texto Básico (TXT)</option>
-              <option value="p0-pdf-text-v1">PDF com Texto</option>
-              <option value="p0-kindle-text-v1">Kindle</option>
-            </select>
-          </div>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="text" style={{
+          <label style={{
             display: 'block',
             fontSize: '14px',
             fontWeight: '500',
             color: '#374151',
-            marginBottom: '6px',
+            marginBottom: '12px',
           }}>
-            Texto do Documento *
+            Método de Entrada *
           </label>
-          <textarea
-            id="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            required
-            rows={15}
-            placeholder="Cole o texto completo do documento aqui..."
+
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '20px',
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                setInputMethod('pdf');
+                setExecutionProfile('p0-pdf-text-v1');
+                setSelectedFile(null);
+                setUrl('');
+                setExtractedText('');
+              }}
+              style={{
+                flex: 1,
+                padding: '16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: inputMethod === 'pdf' ? '#2563eb' : '#ffffff',
+                color: inputMethod === 'pdf' ? '#ffffff' : '#374151',
+                border: inputMethod === 'pdf' ? '2px solid #2563eb' : '2px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              📄 Upload PDF
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setInputMethod('kindle');
+                setExecutionProfile('p0-kindle-text-v1');
+                setSelectedFile(null);
+                setUrl('');
+                setExtractedText('');
+              }}
+              style={{
+                flex: 1,
+                padding: '16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: inputMethod === 'kindle' ? '#2563eb' : '#ffffff',
+                color: inputMethod === 'kindle' ? '#ffffff' : '#374151',
+                border: inputMethod === 'kindle' ? '2px solid #2563eb' : '2px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              📚 Arquivo Kindle/TXT
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setInputMethod('url');
+                setExecutionProfile('p0-txt-basic-v1');
+                setSelectedFile(null);
+                setUrl('');
+                setExtractedText('');
+              }}
+              style={{
+                flex: 1,
+                padding: '16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: inputMethod === 'url' ? '#2563eb' : '#ffffff',
+                color: inputMethod === 'url' ? '#ffffff' : '#374151',
+                border: inputMethod === 'url' ? '2px solid #2563eb' : '2px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              🌐 URL
+            </button>
+          </div>
+
+          {inputMethod === 'pdf' && (
+            <div>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileSelect}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '14px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: '12px',
+                }}
+              />
+              {selectedFile && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '12px',
+                }}>
+                  Arquivo selecionado: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)
+                </div>
+              )}
+            </div>
+          )}
+
+          {inputMethod === 'kindle' && (
+            <div>
+              <input
+                type="file"
+                accept=".txt,.mobi,.azw"
+                onChange={handleFileSelect}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '14px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: '12px',
+                }}
+              />
+              {selectedFile && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '12px',
+                }}>
+                  Arquivo selecionado: {selectedFile.name}
+                </div>
+              )}
+            </div>
+          )}
+
+          {inputMethod === 'url' && (
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://exemplo.com/artigo"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '12px',
+                fontSize: '14px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                marginBottom: '12px',
+              }}
+            />
+          )}
+
+          <button
+            type="button"
+            onClick={handleExtractText}
+            disabled={extracting || (inputMethod !== 'url' && !selectedFile) || (inputMethod === 'url' && !url)}
             style={{
               width: '100%',
-              padding: '12px',
-              fontSize: '14px',
-              border: '1px solid #d1d5db',
+              padding: '14px',
+              fontSize: '15px',
+              fontWeight: '500',
+              backgroundColor: extracting ? '#9ca3af' : '#10b981',
+              color: 'white',
+              border: 'none',
               borderRadius: '6px',
-              fontFamily: 'monospace',
-              resize: 'vertical',
+              cursor: extracting || (inputMethod !== 'url' && !selectedFile) || (inputMethod === 'url' && !url) ? 'not-allowed' : 'pointer',
+              marginBottom: '16px',
             }}
-          />
+          >
+            {extracting ? 'Extraindo texto...' : '🔍 Extrair Texto'}
+          </button>
+
+          {extractedText && (
+            <div>
+              <div style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '8px',
+              }}>
+                Texto Extraído ({extractedText.length.toLocaleString()} caracteres)
+              </div>
+              <div style={{
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                padding: '12px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                lineHeight: '1.6',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {extractedText.substring(0, 500)}...
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '24px' }}>
@@ -409,20 +656,29 @@ function IngestPage({ onBack }: IngestPageProps) {
 
         <button
           type="submit"
-          disabled={processing}
+          disabled={processing || !extractedText}
           style={{
             padding: '12px 32px',
             fontSize: '16px',
             fontWeight: '500',
-            backgroundColor: processing ? '#9ca3af' : '#2563eb',
+            backgroundColor: processing || !extractedText ? '#9ca3af' : '#2563eb',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: processing ? 'not-allowed' : 'pointer',
+            cursor: processing || !extractedText ? 'not-allowed' : 'pointer',
           }}
         >
           {processing ? 'Processando...' : 'Processar Documento'}
         </button>
+        {!extractedText && (
+          <div style={{
+            marginTop: '8px',
+            fontSize: '13px',
+            color: '#9ca3af',
+          }}>
+            Extraia o texto primeiro para poder processar o documento
+          </div>
+        )}
       </form>
     </div>
   );
