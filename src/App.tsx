@@ -1,122 +1,77 @@
 import { useState } from 'react'
-import HomePage from './components/HomePage'
-import InputForm from './components/InputForm'
-import ResultScreen from './components/ResultScreen'
-import CaseList from './components/CaseList'
-import A1Output from './components/A1Output'
-import A2Output from './components/A2Output'
-import FinalReviewScreen from './components/FinalReviewScreen'
-import { supabase } from './lib/supabase'
+import Navigation from './components/Navigation'
+import Dashboard from './components/Dashboard'
+import IngestPage from './components/IngestPage'
+import DocumentsPage from './components/DocumentsPage'
+import ChunksPage from './components/ChunksPage'
+import EvidencesPage from './components/EvidencesPage'
+import ValidationPage from './components/ValidationPage'
 
-type Page = 'home' | 'new-case' | 'case-list' | 'a1-output' | 'a2-output' | 'final-review' | 'result'
+type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'validate' | 'audit'
+
+interface PageParams {
+  sourceId?: string;
+}
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('home')
-  const [caseData, setCaseData] = useState({ description: '', additionalNotes: '' })
-  const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [pageParams, setPageParams] = useState<PageParams>({})
 
-  const handleSubmit = (description: string, additionalNotes: string) => {
-    setCaseData({ description, additionalNotes })
-    setCurrentPage('a1-output')
-  }
-
-  const handleA1Continue = () => {
-    setCurrentPage('a2-output')
-  }
-
-  const handleA2Continue = () => {
-    setCurrentPage('final-review')
-  }
-
-  const handleFinalConfirm = async (humanReview: string) => {
-    setLoading(true)
-
-    const { error } = await supabase
-      .from('cases')
-      .insert({
-        description: caseData.description,
-        additional_notes: caseData.additionalNotes || null,
-        human_review: humanReview
-      })
-
-    setLoading(false)
-
-    if (!error) {
-      setCurrentPage('result')
-    }
-  }
-
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, params?: PageParams) => {
     setCurrentPage(page as Page)
-  }
-
-  const handleReset = () => {
-    setCurrentPage('home')
-    setCaseData({ description: '', additionalNotes: '' })
+    setPageParams(params || {})
   }
 
   return (
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f3f4f6',
-      padding: '20px'
     }}>
-      {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
+      <Navigation currentPage={currentPage} onNavigate={handleNavigate} />
 
-      {currentPage === 'new-case' && (
-        <InputForm onSubmit={handleSubmit} onBack={() => handleNavigate('home')} />
+      {currentPage === 'dashboard' && (
+        <Dashboard onNavigate={handleNavigate} />
       )}
 
-      {currentPage === 'case-list' && <CaseList onNavigate={handleNavigate} />}
+      {currentPage === 'ingest' && (
+        <IngestPage onBack={() => handleNavigate('dashboard')} />
+      )}
 
-      {currentPage === 'a1-output' && (
-        <A1Output
-          description={caseData.description}
-          additionalNotes={caseData.additionalNotes}
-          onContinue={handleA1Continue}
-          onBack={() => handleNavigate('new-case')}
+      {currentPage === 'documents' && (
+        <DocumentsPage onNavigate={handleNavigate} />
+      )}
+
+      {currentPage === 'chunks' && (
+        <ChunksPage
+          sourceId={pageParams.sourceId}
+          onBack={() => handleNavigate('documents')}
         />
       )}
 
-      {currentPage === 'a2-output' && (
-        <A2Output
-          description={caseData.description}
-          additionalNotes={caseData.additionalNotes}
-          onContinue={handleA2Continue}
-          onBack={() => handleNavigate('a1-output')}
+      {currentPage === 'evidences' && (
+        <EvidencesPage
+          sourceId={pageParams.sourceId}
+          onBack={() => handleNavigate('documents')}
         />
       )}
 
-      {currentPage === 'final-review' && (
-        <FinalReviewScreen
-          description={caseData.description}
-          additionalNotes={caseData.additionalNotes}
-          onConfirm={handleFinalConfirm}
-          onBack={() => handleNavigate('a2-output')}
-          loading={loading}
-        />
+      {currentPage === 'validate' && (
+        <ValidationPage />
       )}
 
-      {currentPage === 'result' && (
-        <ResultScreen
-          data={`Descrição: ${caseData.description}\n\nObservações: ${caseData.additionalNotes || 'Nenhuma'}`}
-          onReset={handleReset}
-        />
-      )}
-
-      {loading && (
+      {currentPage === 'audit' && (
         <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          color: 'white',
-          padding: '20px 40px',
-          borderRadius: '8px',
-          fontSize: '18px'
+          maxWidth: '1400px',
+          margin: '40px auto',
+          padding: '0 24px',
+          textAlign: 'center',
         }}>
-          Processando...
+          <h1 style={{ fontSize: '32px', color: '#1a1a1a', marginBottom: '16px' }}>
+            Auditoria e Rastreabilidade
+          </h1>
+          <p style={{ fontSize: '16px', color: '#6b7280' }}>
+            Funcionalidade em desenvolvimento
+          </p>
         </div>
       )}
     </div>
