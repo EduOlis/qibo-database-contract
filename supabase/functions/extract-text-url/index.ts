@@ -32,6 +32,17 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const contentType = req.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      return new Response(
+        JSON.stringify({ error: "Content-Type must be application/json" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const { url } = await req.json();
 
     if (!url) {

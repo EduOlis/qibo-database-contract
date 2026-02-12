@@ -39,11 +39,6 @@ function IngestPage({ onBack }: IngestPageProps) {
     setExtractedText('');
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Você precisa estar autenticado');
-      }
-
       if (inputMethod === 'pdf' && selectedFile) {
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -51,9 +46,6 @@ function IngestPage({ onBack }: IngestPageProps) {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text-pdf`;
         const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
           body: formData,
         });
 
@@ -71,7 +63,6 @@ function IngestPage({ onBack }: IngestPageProps) {
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ url }),
