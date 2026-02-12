@@ -46,6 +46,9 @@ function IngestPage({ onBack }: IngestPageProps) {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text-pdf`;
         const response = await fetch(apiUrl, {
           method: 'POST',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
           body: formData,
         });
 
@@ -64,6 +67,7 @@ function IngestPage({ onBack }: IngestPageProps) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ url }),
         });
