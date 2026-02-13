@@ -15,6 +15,7 @@ interface P0Request {
   rawText: string;
   executionProfile: string;
   notes?: string;
+  fileName?: string;
 }
 
 interface Chunk {
@@ -104,7 +105,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const requestData: P0Request = await req.json();
-    const { sourceTitle, sourceAuthor, sourceYear, sourceType, rawText, executionProfile, notes } = requestData;
+    const { sourceTitle, sourceAuthor, sourceYear, sourceType, rawText, executionProfile, notes, fileName } = requestData;
 
     if (!sourceTitle || !rawText || !executionProfile) {
       return new Response(
@@ -115,6 +116,9 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const actualFileName = fileName || `${sourceTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.txt`;
+    const filePath = `text/${actualFileName}`;
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(
       authHeader.replace("Bearer ", "")
@@ -138,6 +142,8 @@ Deno.serve(async (req: Request) => {
         year: sourceYear,
         source_type: sourceType,
         notes: notes,
+        file_name: actualFileName,
+        file_path: filePath,
       })
       .select()
       .single();

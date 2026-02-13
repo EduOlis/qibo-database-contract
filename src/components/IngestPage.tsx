@@ -110,6 +110,15 @@ function IngestPage({ onBack }: IngestPageProps) {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-p0`;
 
+      let fileName = undefined;
+      if (inputMethod === 'pdf' && selectedFile) {
+        fileName = selectedFile.name;
+      } else if (inputMethod === 'kindle' && selectedFile) {
+        fileName = selectedFile.name;
+      } else if (inputMethod === 'url' && url) {
+        fileName = url.split('/').pop() || 'url-content.txt';
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -124,6 +133,7 @@ function IngestPage({ onBack }: IngestPageProps) {
           rawText: extractedText,
           executionProfile,
           notes: notes || undefined,
+          fileName: fileName,
         }),
       });
 
