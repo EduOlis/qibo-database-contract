@@ -36,16 +36,17 @@ interface LLMProvider {
 }
 
 class GeminiProvider implements LLMProvider {
-  name = "gemini-2.5-flash";
+  name: string;
   private apiKey: string;
 
   constructor(apiKey: string) {
+    this.name = Deno.env.get("LLM_MODEL") || "gemini-1.5-flash";
     this.apiKey = apiKey;
   }
 
   async callAPI(systemPrompt: string, userPrompt: string): Promise<string> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.name}:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
         headers: {
@@ -82,11 +83,55 @@ class GeminiProvider implements LLMProvider {
   }
 }
 
-class AnthropicProvider implements LLMProvider {
-  name = "claude-3-5-sonnet-20241022";
+class OpenAIProvider implements LLMProvider {
+  name: string;
   private apiKey: string;
 
   constructor(apiKey: string) {
+    this.name = Deno.env.get("LLM_MODEL") || "gpt-4o-mini";
+    this.apiKey = apiKey;
+  }
+
+  async callAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.name,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ],
+        temperature: 0,
+        max_tokens: 4096
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result.choices[0].message.content;
+  }
+}
+
+class AnthropicProvider implements LLMProvider {
+  name: string;
+  private apiKey: string;
+
+  constructor(apiKey: string) {
+    this.name = Deno.env.get("LLM_MODEL") || "claude-3-5-sonnet-20241022";
     this.apiKey = apiKey;
   }
 
@@ -129,6 +174,11 @@ function getLLMProvider(): LLMProvider | null {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (apiKey) {
       return new GeminiProvider(apiKey);
+    }
+  } else if (providerType === "openai") {
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (apiKey) {
+      return new OpenAIProvider(apiKey);
     }
   } else if (providerType === "anthropic") {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");

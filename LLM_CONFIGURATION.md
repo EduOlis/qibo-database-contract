@@ -1,39 +1,76 @@
 # Configuração de LLM
 
-O sistema agora suporta múltiplos provedores de LLM de forma modular.
+O sistema suporta múltiplos provedores de LLM de forma modular e configurável.
 
 ## Provedores Disponíveis
 
-### Gemini (Padrão)
-- **Modelo**: `gemini-1.5-pro`
+### 1. Google Gemini (Padrão)
+- **Modelo padrão**: `gemini-1.5-flash`
 - **Variável de ambiente**: `GEMINI_API_KEY`
+- **Vantagens**: Rápido, gratuito para uso moderado
+- **Como obter**: https://aistudio.google.com/app/apikey
 
-### Anthropic Claude
-- **Modelo**: `claude-3-5-sonnet-20241022`
+### 2. OpenAI
+- **Modelo padrão**: `gpt-4o-mini`
+- **Variável de ambiente**: `OPENAI_API_KEY`
+- **Vantagens**: Alta qualidade, bom para produção
+- **Como obter**: https://platform.openai.com/api-keys
+
+### 3. Anthropic Claude
+- **Modelo padrão**: `claude-3-5-sonnet-20241022`
 - **Variável de ambiente**: `ANTHROPIC_API_KEY`
+- **Vantagens**: Excelente para tarefas complexas
+- **Como obter**: https://console.anthropic.com/
 
 ## Como Configurar
 
-### Opção 1: Usar Gemini (Recomendado para testes)
+### Configuração Básica (Gemini)
 
-1. Obtenha sua API key em: https://aistudio.google.com/app/apikey
-2. Configure as variáveis de ambiente no Supabase:
-   - `GEMINI_API_KEY`: sua chave da API do Gemini
-   - `LLM_PROVIDER`: `gemini` (ou deixe vazio, pois é o padrão)
+Por padrão, o sistema usa Gemini. Basta configurar:
 
-### Opção 2: Usar Anthropic Claude
+1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard)
+2. Vá em **Edge Functions** → **Manage secrets**
+3. Adicione a secret:
+   - Nome: `GEMINI_API_KEY`
+   - Valor: sua chave da API do Gemini
 
-1. Obtenha sua API key em: https://console.anthropic.com/
-2. Configure as variáveis de ambiente no Supabase:
-   - `ANTHROPIC_API_KEY`: sua chave da API da Anthropic
+### Trocar para OpenAI
+
+Para usar OpenAI em vez do Gemini:
+
+1. Adicione as secrets no Supabase:
+   - `OPENAI_API_KEY`: sua chave da OpenAI
+   - `LLM_PROVIDER`: `openai`
+
+2. (Opcional) Para usar um modelo diferente:
+   - `LLM_MODEL`: ex: `gpt-4o`, `gpt-4-turbo`, etc.
+
+### Trocar para Anthropic Claude
+
+Para usar Claude:
+
+1. Adicione as secrets no Supabase:
+   - `ANTHROPIC_API_KEY`: sua chave da Anthropic
    - `LLM_PROVIDER`: `anthropic`
 
-## Modo Fallback
+2. (Opcional) Para usar um modelo diferente:
+   - `LLM_MODEL`: ex: `claude-3-opus-20240229`, etc.
 
-Se nenhuma API key estiver configurada, o sistema usará um modo fallback que:
-- Divide o texto em sentenças
-- Não usa inteligência artificial
-- Funciona para testes básicos
+## Variáveis de Ambiente
+
+| Variável | Descrição | Valor Padrão |
+|----------|-----------|--------------|
+| `LLM_PROVIDER` | Provider a ser usado | `gemini` |
+| `LLM_MODEL` | Modelo específico do provider | Varia por provider |
+| `GEMINI_API_KEY` | Chave de API do Gemini | - |
+| `OPENAI_API_KEY` | Chave de API da OpenAI | - |
+| `ANTHROPIC_API_KEY` | Chave de API da Anthropic | - |
+
+### Modelos Padrão por Provider
+
+- **Gemini**: `gemini-1.5-flash`
+- **OpenAI**: `gpt-4o-mini`
+- **Anthropic**: `claude-3-5-sonnet-20241022`
 
 ## Adicionar Novo Provedor
 

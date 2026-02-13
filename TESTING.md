@@ -4,20 +4,30 @@ Este guia mostra como testar o pipeline de processamento de documentos usando au
 
 ## Configuração Inicial
 
-### 1. Configurar OPENAI_API_KEY no Supabase
+### 1. Configurar chave de API do LLM no Supabase
 
-**IMPORTANTE:** As edge functions do pipeline (A0, A1, A2) precisam de acesso à API da OpenAI.
+**IMPORTANTE:** As edge functions do pipeline (A0, A1, A2) precisam de acesso a um modelo LLM.
 
-Para configurar:
+Por padrão, o sistema usa **Google Gemini**. Para configurar:
+
 1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard)
 2. Vá em **Edge Functions** → **Manage secrets**
-3. Adicione a secret: `OPENAI_API_KEY` com sua chave da OpenAI
+3. Adicione a secret: `GEMINI_API_KEY` com sua chave do Google AI
 4. Aguarde alguns segundos para a atualização
 
-Se você não tiver uma chave OpenAI:
-- Crie uma conta em [platform.openai.com](https://platform.openai.com)
-- Vá em API keys e crie uma nova chave
-- Adicione créditos à sua conta se necessário
+Se você não tiver uma chave Gemini:
+- Acesse [aistudio.google.com](https://aistudio.google.com)
+- Clique em "Get API key"
+- Crie uma nova API key
+- O Gemini oferece uso gratuito generoso
+
+**Configurações opcionais:**
+- Para usar OpenAI em vez do Gemini, adicione também as secrets:
+  - `OPENAI_API_KEY`: sua chave da OpenAI
+  - `LLM_PROVIDER`: defina como `openai`
+  - `LLM_MODEL`: (opcional) ex: `gpt-4o-mini` ou `gpt-4o`
+
+Veja mais detalhes em `LLM_CONFIGURATION.md`
 
 ### 2. Obter Token de Autenticação
 

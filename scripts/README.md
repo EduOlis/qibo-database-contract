@@ -4,13 +4,17 @@ Este diretório contém scripts auxiliares para testar o pipeline de processamen
 
 ## Pré-requisitos
 
-### OPENAI_API_KEY
+### Chave de API do LLM
 
-As edge functions do pipeline precisam de acesso à OpenAI API. Configure no Supabase:
+As edge functions do pipeline precisam de acesso a um modelo LLM. Por padrão, usa Google Gemini.
+
+Configure no Supabase:
 
 1. Acesse [Supabase Dashboard](https://supabase.com/dashboard)
 2. Vá em **Edge Functions** → **Manage secrets**
-3. Adicione: `OPENAI_API_KEY` com sua chave da OpenAI
+3. Adicione: `GEMINI_API_KEY` com sua chave do Google AI
+
+Para usar outros providers (OpenAI, Anthropic), veja `LLM_CONFIGURATION.md`
 
 ## Configuração
 

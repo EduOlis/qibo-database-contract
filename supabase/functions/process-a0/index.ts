@@ -13,6 +13,8 @@ interface A0Request {
   profileId: string;
 }
 
+const A0_SYSTEM_PROMPT = `Você é um assistente especializado em extrair trechos literais de textos. Retorne sempre JSON válido.`;
+
 const A0_PROMPT = `Você é o agente A0 - Extração Literal de Evidências.
 
 RESPONSABILIDADE EXCLUSIVA:
@@ -39,7 +41,40 @@ TEXTO PARA ANÁLISE:
 
 Retorne apenas o JSON array, sem texto adicional.`;
 
-async function callOpenAI(prompt: string, apiKey: string): Promise<any> {
+async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
+  const model = Deno.env.get("LLM_MODEL") || "gemini-1.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: `${systemPrompt}\n\n${userPrompt}`
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: "application/json"
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callOpenAI(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
+  const model = Deno.env.get("LLM_MODEL") || "gpt-4o-mini";
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -47,15 +82,15 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<any> {
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em extrair trechos literais de textos. Retorne sempre JSON válido."
+          content: systemPrompt
         },
         {
           role: "user",
-          content: prompt
+          content: userPrompt
         }
       ],
       temperature: 0.1,
@@ -70,6 +105,26 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<any> {
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+async function callLLM(systemPrompt: string, userPrompt: string): Promise<string> {
+  const provider = Deno.env.get("LLM_PROVIDER") || "gemini";
+
+  if (provider === "gemini") {
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY not configured");
+    }
+    return await callGemini(systemPrompt, userPrompt, apiKey);
+  } else if (provider === "openai") {
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return await callOpenAI(systemPrompt, userPrompt, apiKey);
+  } else {
+    throw new Error(`Unsupported LLM provider: ${provider}`);
+  }
 }
 
 function validateExcerptIsLiteral(excerpt: string, chunkText: string): boolean {
@@ -89,17 +144,6 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-
-    if (!openaiKey) {
-      return new Response(
-        JSON.stringify({ error: "OpenAI API key not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -171,7 +215,7 @@ Deno.serve(async (req: Request) => {
       const prompt = A0_PROMPT.replace("{chunk_text}", chunk.raw_text);
 
       try {
-        const responseText = await callOpenAI(prompt, openaiKey);
+        const responseText = await callLLM(A0_SYSTEM_PROMPT, prompt);
         const response = JSON.parse(responseText);
         const excerpts = response.excerpts || [];
 
