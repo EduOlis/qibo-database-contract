@@ -237,7 +237,6 @@ Deno.serve(async (req: Request) => {
               justification: excerpt.justification || "",
               language: chunk.language,
               page_reference: chunk.page_reference,
-              profile_id: profileId,
               status: "pending",
             });
 
