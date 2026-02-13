@@ -40,7 +40,7 @@ class GeminiProvider implements LLMProvider {
   private apiKey: string;
 
   constructor(apiKey: string) {
-    this.name = Deno.env.get("LLM_MODEL") || "gemini-1.5-flash";
+    this.name = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
     this.apiKey = apiKey;
   }
 

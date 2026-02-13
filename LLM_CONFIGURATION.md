@@ -5,7 +5,7 @@ O sistema suporta múltiplos provedores de LLM de forma modular e configurável.
 ## Provedores Disponíveis
 
 ### 1. Google Gemini (Padrão)
-- **Modelo padrão**: `gemini-1.5-flash`
+- **Modelo padrão**: `gemini-2.5-flash`
 - **Variável de ambiente**: `GEMINI_API_KEY`
 - **Vantagens**: Rápido, gratuito para uso moderado
 - **Como obter**: https://aistudio.google.com/app/apikey
@@ -68,7 +68,7 @@ Para usar Claude:
 
 ### Modelos Padrão por Provider
 
-- **Gemini**: `gemini-1.5-flash`
+- **Gemini**: `gemini-2.5-flash`
 - **OpenAI**: `gpt-4o-mini`
 - **Anthropic**: `claude-3-5-sonnet-20241022`
 

@@ -42,7 +42,7 @@ TEXTO PARA ANÁLISE:
 Retorne apenas o JSON array, sem texto adicional.`;
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  const model = Deno.env.get("LLM_MODEL") || "gemini-1.5-flash";
+  const model = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
