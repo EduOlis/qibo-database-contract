@@ -210,6 +210,7 @@ Deno.serve(async (req: Request) => {
 
     let totalEvidences = 0;
     let totalSkipped = 0;
+    const llmResponses: any[] = [];
 
     for (const chunk of chunksToProcess) {
       const prompt = A0_PROMPT.replace("{chunk_text}", chunk.raw_text);
@@ -218,9 +219,19 @@ Deno.serve(async (req: Request) => {
         console.log(`Processing chunk ${chunk.id}...`);
         const responseText = await callLLM(A0_SYSTEM_PROMPT, prompt);
         console.log(`LLM response:`, responseText);
-        const response = JSON.parse(responseText);
+
+        let response;
+        try {
+          response = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error(`JSON parse error for chunk ${chunk.id}:`, parseError);
+          llmResponses.push({ chunkId: chunk.id, error: 'JSON parse failed', raw: responseText });
+          continue;
+        }
+
         const excerpts = response.excerpts || [];
         console.log(`Found ${excerpts.length} excerpts`);
+        llmResponses.push({ chunkId: chunk.id, excerptCount: excerpts.length, response });
 
         for (const excerpt of excerpts) {
           if (!validateExcerptIsLiteral(excerpt.excerpt_text, chunk.raw_text)) {
@@ -294,6 +305,7 @@ Deno.serve(async (req: Request) => {
         evidencesCreated: totalEvidences,
         skippedNonLiteral: totalSkipped,
         executionTimeMs: executionTime,
+        debug_llmResponses: llmResponses,
       }),
       {
         status: 200,
