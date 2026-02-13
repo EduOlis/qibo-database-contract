@@ -119,11 +119,15 @@ function IngestPage({ onBack }: IngestPageProps) {
         fileName = url.split('/').pop() || 'url-content.txt';
       }
 
+      console.log('Session:', session);
+      console.log('Token:', session.access_token);
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           sourceTitle: title,
