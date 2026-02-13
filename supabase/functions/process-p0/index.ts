@@ -97,30 +97,8 @@ Deno.serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
       return new Response(
-        JSON.stringify({
-          error: "Unauthorized",
-          message: userError?.message || "Invalid JWT",
-          code: 401
-        }),
+        JSON.stringify({ error: "Missing authorization header" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -128,8 +106,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+          message: userError?.message || "Invalid JWT",
+          details: userError
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     const requestData: P0Request = await req.json();
     const { sourceTitle, sourceAuthor, sourceYear, sourceType, rawText, executionProfile, notes, fileName } = requestData;
