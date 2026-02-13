@@ -34,12 +34,11 @@ Para cada trecho relevante identificado, extraia:
 - relevance_score: 0.0 a 1.0
 - justification: breve explicação de por que este trecho é relevante
 
-Retorne um array JSON de excerpts.
-
 TEXTO PARA ANÁLISE:
 {chunk_text}
 
-Retorne apenas o JSON array, sem texto adicional.`;
+Retorne um objeto JSON no formato: { "excerpts": [ ... ] }
+Exemplo: { "excerpts": [{ "excerpt_text": "...", "suggested_entity_type": "...", "relevance_score": 0.9, "justification": "..." }] }`;
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
   const model = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
