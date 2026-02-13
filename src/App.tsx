@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import IngestPage from './components/IngestPage'
@@ -17,16 +17,38 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [pageParams, setPageParams] = useState<PageParams>({})
 
+  useEffect(() => {
+    console.log('App component mounted')
+    console.log('Environment variables:', {
+      url: import.meta.env.VITE_SUPABASE_URL,
+      key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'present' : 'missing'
+    })
+  }, [])
+
   const handleNavigate = (page: string, params?: PageParams) => {
     setCurrentPage(page as Page)
     setPageParams(params || {})
   }
 
+  console.log('Rendering App component, current page:', currentPage)
+
   return (
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f3f4f6',
+      width: '100%',
     }}>
+      <div style={{
+        padding: '20px',
+        backgroundColor: '#ffffff',
+        margin: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      }}>
+        <h1 style={{ color: '#1a1a1a', marginBottom: '10px' }}>Sistema Funcionando</h1>
+        <p style={{ color: '#6b7280' }}>Página atual: {currentPage}</p>
+      </div>
+
       <Navigation currentPage={currentPage} onNavigate={handleNavigate} />
 
       {currentPage === 'dashboard' && (
