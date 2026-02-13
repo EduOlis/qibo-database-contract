@@ -65,9 +65,9 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
 
-    const contentType = response.headers.get('content-type') || '';
+    const responseContentType = response.headers.get('content-type') || '';
 
-    if (contentType.includes('application/pdf')) {
+    if (responseContentType.includes('application/pdf')) {
       return new Response(
         JSON.stringify({
           error: "PDF URLs should be processed through the PDF extractor",
