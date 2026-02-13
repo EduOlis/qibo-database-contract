@@ -215,9 +215,12 @@ Deno.serve(async (req: Request) => {
       const prompt = A0_PROMPT.replace("{chunk_text}", chunk.raw_text);
 
       try {
+        console.log(`Processing chunk ${chunk.id}...`);
         const responseText = await callLLM(A0_SYSTEM_PROMPT, prompt);
+        console.log(`LLM response:`, responseText);
         const response = JSON.parse(responseText);
         const excerpts = response.excerpts || [];
+        console.log(`Found ${excerpts.length} excerpts`);
 
         for (const excerpt of excerpts) {
           if (!validateExcerptIsLiteral(excerpt.excerpt_text, chunk.raw_text)) {
