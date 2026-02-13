@@ -57,7 +57,7 @@ async function testProcessA0(sourceId) {
     return null;
   }
 
-  console.log('✅ A0 concluído:', data);
+  console.log('✅ A0 concluído:', JSON.stringify(data, null, 2));
   return data;
 }
 
