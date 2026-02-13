@@ -3,7 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, apikey",
 };
 
 async function extractTextFromHTML(html: string): Promise<string> {
@@ -65,9 +65,9 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
 
-    const responseContentType = response.headers.get('content-type') || '';
+    const contentType = response.headers.get('content-type') || '';
 
-    if (responseContentType.includes('application/pdf')) {
+    if (contentType.includes('application/pdf')) {
       return new Response(
         JSON.stringify({
           error: "PDF URLs should be processed through the PDF extractor",
