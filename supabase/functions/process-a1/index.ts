@@ -1,33 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-interface A1Block {
-  id: string;
-  text: string;
-  aspect: string;
-}
-
 interface A1Request {
-  text: string;
-  prefix: string;
+  sourceId: string;
+  profileId: string;
 }
 
-interface A1Response {
-  blocks: A1Block[];
-  audit: {
-    agent_name: string;
-    agent_model: string;
-    agent_version: string;
-    contract_version: string;
-    execution_time_ms: number;
-    input_length: number;
-    output_blocks_count: number;
-  };
+interface A1Block {
+  aspect: string;
+  text: string;
 }
 
 interface LLMProvider {
@@ -200,8 +187,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     const startTime = Date.now();
-    let body;
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Missing authorization header");
+    }
+
+    let body;
     try {
       body = await req.json();
     } catch (e) {
@@ -217,11 +213,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { text, prefix } = body as A1Request;
+    const { sourceId, profileId } = body as A1Request;
 
-    if (!text || text.trim().length === 0) {
+    if (!sourceId || !profileId) {
       return new Response(
-        JSON.stringify({ error: "Text is required" }),
+        JSON.stringify({ error: "Missing required fields: sourceId and profileId" }),
         {
           status: 400,
           headers: {
@@ -232,11 +228,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!prefix) {
+    const { data: evidences, error: evidencesError } = await supabase
+      .from("kb_evidence_excerpts")
+      .select("id, excerpt_text, suggested_entity_type")
+      .eq("source_id", sourceId)
+      .eq("status", "pending");
+
+    if (evidencesError) {
+      throw new Error(`Failed to fetch evidences: ${evidencesError.message}`);
+    }
+
+    if (!evidences || evidences.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Prefix is required" }),
+        JSON.stringify({
+          message: "No pending evidences found for this source",
+          clustersCreated: 0
+        }),
         {
-          status: 400,
+          status: 200,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
@@ -244,6 +253,8 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const combinedText = evidences.map(e => e.excerpt_text).join("\n\n");
 
     const systemPrompt = `Você é o agente A1 — Segmentação Mecânica Literal.
 
@@ -323,30 +334,20 @@ Produza apenas o JSON. Nenhum comentário adicional.`;
     const userPrompt = `Organize o seguinte texto em blocos baseados em aspectos textuais superficiais.
 
 Texto:
-${text}
+${combinedText}
 
 Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     const llmProvider = getLLMProvider();
 
     if (!llmProvider) {
-      const fallbackBlocks = processTextFallback(text, prefix);
-
       return new Response(
         JSON.stringify({
-          blocks: fallbackBlocks,
-          audit: {
-            agent_name: "A1",
-            agent_model: "A1-α-fallback",
-            agent_version: "1.0.0",
-            contract_version: "A1 v1.1",
-            execution_time_ms: Date.now() - startTime,
-            input_length: text.length,
-            output_blocks_count: fallbackBlocks.length,
-            warning: "Using fallback mode - LLM API not configured"
-          }
+          error: "LLM provider not configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.",
+          clustersCreated: 0
         }),
         {
+          status: 500,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
@@ -362,31 +363,65 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       throw new Error("Invalid response format from LLM");
     }
 
-    const parsedBlocks = JSON.parse(jsonMatch[0]);
+    const parsedBlocks: A1Block[] = JSON.parse(jsonMatch[0]);
 
-    const blocks: A1Block[] = parsedBlocks.map((block: { aspect: string; text: string }, index: number) => ({
-      id: `${prefix}-BLOCO-${String(index + 1).padStart(2, '0')}`,
-      text: block.text.trim(),
-      aspect: block.aspect
-    }));
+    let clustersCreated = 0;
+
+    for (const block of parsedBlocks) {
+      const relevantEvidenceIds = evidences
+        .filter(e => block.text.includes(e.excerpt_text))
+        .map(e => e.id);
+
+      if (relevantEvidenceIds.length === 0) {
+        continue;
+      }
+
+      const { error: insertError } = await supabase
+        .from("kb_evidence_clusters")
+        .insert({
+          source_id: sourceId,
+          cluster_label: block.aspect,
+          cluster_basis: block.text,
+          evidence_ids: relevantEvidenceIds,
+          agent_version: "A1 v1.0.0",
+          contract_hash: "a1_v1.1",
+          status: "pending",
+          confidence_level: 1.0
+        });
+
+      if (!insertError) {
+        clustersCreated++;
+      } else {
+        console.error("Failed to insert cluster:", insertError);
+      }
+    }
+
+    await supabase
+      .from("kb_document_pipeline_status")
+      .update({
+        a1_status: "completed",
+        a1_completed_at: new Date().toISOString(),
+        total_clusters: clustersCreated,
+        updated_at: new Date().toISOString()
+      })
+      .eq("source_id", sourceId);
 
     const executionTime = Date.now() - startTime;
 
-    const responseData: A1Response = {
-      blocks,
-      audit: {
-        agent_name: "A1",
-        agent_model: `A1-α (${llmProvider.name})`,
-        agent_version: "1.0.0",
-        contract_version: "A1 v1.1",
-        execution_time_ms: executionTime,
-        input_length: text.length,
-        output_blocks_count: blocks.length
-      }
-    };
-
     return new Response(
-      JSON.stringify(responseData),
+      JSON.stringify({
+        message: "A1 processing completed successfully",
+        clustersCreated,
+        audit: {
+          agent_name: "A1",
+          agent_model: `A1-α (${llmProvider.name})`,
+          agent_version: "1.0.0",
+          contract_version: "A1 v1.1",
+          execution_time_ms: executionTime,
+          input_evidences: evidences.length,
+          output_clusters: clustersCreated
+        }
+      }),
       {
         headers: {
           ...corsHeaders,
@@ -413,43 +448,3 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
     );
   }
 });
-
-function processTextFallback(text: string, prefix: string): A1Block[] {
-  const blocks: A1Block[] = [];
-  let blockCounter = 1;
-
-  const paragraphs = text.split('\n').filter(line => line.trim().length > 0);
-
-  for (const paragraph of paragraphs) {
-    const sentences = paragraph
-      .split(/([.!?]+\s+)/)
-      .reduce<string[]>((acc, part, idx, arr) => {
-        if (idx % 2 === 0 && part.trim()) {
-          const nextPart = arr[idx + 1] || '';
-          acc.push((part + nextPart).trim());
-        }
-        return acc;
-      }, [])
-      .filter(s => s.length > 0);
-
-    if (sentences.length === 0 && paragraph.trim()) {
-      blocks.push({
-        id: `${prefix}-BLOCO-${String(blockCounter).padStart(2, '0')}`,
-        text: paragraph.trim(),
-        aspect: "unidade-textual"
-      });
-      blockCounter++;
-    } else {
-      for (const sentence of sentences) {
-        blocks.push({
-          id: `${prefix}-BLOCO-${String(blockCounter).padStart(2, '0')}`,
-          text: sentence,
-          aspect: "unidade-textual"
-        });
-        blockCounter++;
-      }
-    }
-  }
-
-  return blocks;
-}
