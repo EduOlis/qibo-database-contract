@@ -137,15 +137,30 @@ function IngestPage({ onBack }: IngestPageProps) {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Resposta inválida do servidor');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar documento');
+        console.error('API Error Response:', data);
+        const errorMessage = data.error || data.message || 'Erro ao processar documento';
+        throw new Error(errorMessage);
       }
 
       setResult(data);
     } catch (err) {
-      console.error('Erro:', err);
+      console.error('Erro completo:', err);
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+      }
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setProcessing(false);
