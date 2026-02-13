@@ -95,14 +95,41 @@ Deno.serve(async (req: Request) => {
   try {
     const startTime = Date.now();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("Missing authorization header");
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+          message: userError?.message || "Invalid JWT",
+          code: 401
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData: P0Request = await req.json();
     const { sourceTitle, sourceAuthor, sourceYear, sourceType, rawText, executionProfile, notes, fileName } = requestData;
@@ -119,20 +146,6 @@ Deno.serve(async (req: Request) => {
 
     const actualFileName = fileName || `${sourceTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.txt`;
     const filePath = `text/${actualFileName}`;
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
 
     const { data: sourceData, error: sourceError } = await supabase
       .from("kb_sources")
