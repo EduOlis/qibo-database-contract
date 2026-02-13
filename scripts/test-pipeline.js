@@ -4,10 +4,12 @@ import 'dotenv/config';
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const testUserToken = process.env.TEST_USER_TOKEN;
+const testUserId = process.env.TEST_USER_ID;
 
-if (!supabaseUrl || !supabaseAnonKey || !testUserToken) {
+if (!supabaseUrl || !supabaseAnonKey || !testUserToken || !testUserId) {
   console.error('❌ Variáveis de ambiente não configuradas!');
-  console.log('Certifique-se de que TEST_USER_TOKEN está definido no .env');
+  console.log('Certifique-se de que TEST_USER_TOKEN e TEST_USER_ID estão definidos no .env');
+  console.log('Execute: npm run get-token');
   process.exit(1);
 }
 
@@ -23,7 +25,7 @@ async function testProcessP0(sourceId) {
   console.log('🔄 Testando process-p0...\n');
 
   const { data, error } = await supabase.functions.invoke('process-p0', {
-    body: { source_id: sourceId }
+    body: { sourceId, profileId: testUserId }
   });
 
   if (error) {
@@ -39,11 +41,19 @@ async function testProcessA0(sourceId) {
   console.log('🔄 Testando process-a0...\n');
 
   const { data, error } = await supabase.functions.invoke('process-a0', {
-    body: { source_id: sourceId }
+    body: { sourceId, profileId: testUserId }
   });
 
   if (error) {
     console.error('❌ Erro:', error);
+    if (error.context) {
+      try {
+        const errorBody = await error.context.text();
+        console.error('Detalhes do erro:', errorBody);
+      } catch (e) {
+        console.error('Não foi possível ler o corpo do erro');
+      }
+    }
     return null;
   }
 
@@ -55,7 +65,7 @@ async function testProcessA1(sourceId) {
   console.log('🔄 Testando process-a1...\n');
 
   const { data, error } = await supabase.functions.invoke('process-a1', {
-    body: { source_id: sourceId }
+    body: { sourceId, profileId: testUserId }
   });
 
   if (error) {
@@ -71,7 +81,7 @@ async function testProcessA2(sourceId) {
   console.log('🔄 Testando process-a2...\n');
 
   const { data, error } = await supabase.functions.invoke('process-a2', {
-    body: { source_id: sourceId }
+    body: { sourceId, profileId: testUserId }
   });
 
   if (error) {

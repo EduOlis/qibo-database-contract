@@ -2,6 +2,16 @@
 
 Este diretório contém scripts auxiliares para testar o pipeline de processamento de documentos.
 
+## Pré-requisitos
+
+### OPENAI_API_KEY
+
+As edge functions do pipeline precisam de acesso à OpenAI API. Configure no Supabase:
+
+1. Acesse [Supabase Dashboard](https://supabase.com/dashboard)
+2. Vá em **Edge Functions** → **Manage secrets**
+3. Adicione: `OPENAI_API_KEY` com sua chave da OpenAI
+
 ## Configuração
 
 ### 1. Obter Token de Teste

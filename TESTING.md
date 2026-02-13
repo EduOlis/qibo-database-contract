@@ -4,7 +4,22 @@ Este guia mostra como testar o pipeline de processamento de documentos usando au
 
 ## Configuração Inicial
 
-### 1. Obter Token de Autenticação
+### 1. Configurar OPENAI_API_KEY no Supabase
+
+**IMPORTANTE:** As edge functions do pipeline (A0, A1, A2) precisam de acesso à API da OpenAI.
+
+Para configurar:
+1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard)
+2. Vá em **Edge Functions** → **Manage secrets**
+3. Adicione a secret: `OPENAI_API_KEY` com sua chave da OpenAI
+4. Aguarde alguns segundos para a atualização
+
+Se você não tiver uma chave OpenAI:
+- Crie uma conta em [platform.openai.com](https://platform.openai.com)
+- Vá em API keys e crie uma nova chave
+- Adicione créditos à sua conta se necessário
+
+### 2. Obter Token de Autenticação
 
 ```bash
 npm run get-token
@@ -15,7 +30,7 @@ Isso vai:
 - Fazer login automaticamente
 - Adicionar `TEST_USER_TOKEN` e `TEST_USER_ID` ao arquivo `.env`
 
-### 2. Criar Documento de Teste
+### 3. Criar Documento de Teste
 
 ```bash
 npm run create-test-source
