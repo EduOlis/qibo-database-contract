@@ -1,9 +1,12 @@
+import { useAuth } from '../contexts/AuthContext';
+
 interface NavigationProps {
   currentPage: string;
   onNavigate: (page: string) => void;
 }
 
 function Navigation({ currentPage, onNavigate }: NavigationProps) {
+  const { user, signOut } = useAuth();
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'ingest', label: 'Ingerir Documento', icon: '📄' },
@@ -71,6 +74,47 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
               <span>{item.label}</span>
             </button>
           ))}
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginLeft: 'auto'
+        }}>
+          {user && (
+            <>
+              <span style={{
+                color: '#d1d5db',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>
+                {user.email}
+              </span>
+              <button
+                onClick={() => signOut()}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                }}
+              >
+                Sair
+              </button>
+            </>
+          )}
         </div>
       </div>
     </nav>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import IngestPage from './components/IngestPage'
@@ -6,6 +7,7 @@ import DocumentsPage from './components/DocumentsPage'
 import ChunksPage from './components/ChunksPage'
 import EvidencesPage from './components/EvidencesPage'
 import ValidationPage from './components/ValidationPage'
+import Login from './components/Login'
 
 type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'validate' | 'audit'
 
@@ -13,13 +15,37 @@ interface PageParams {
   sourceId?: string;
 }
 
-function App() {
+function AppContent() {
+  const { user, loading } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [pageParams, setPageParams] = useState<PageParams>({})
 
   const handleNavigate = (page: string, params?: PageParams) => {
     setCurrentPage(page as Page)
     setPageParams(params || {})
+  }
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6',
+      }}>
+        <div style={{
+          fontSize: '18px',
+          color: '#6b7280',
+        }}>
+          Carregando...
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login />
   }
 
   return (
@@ -75,6 +101,14 @@ function App() {
         </div>
       )}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
