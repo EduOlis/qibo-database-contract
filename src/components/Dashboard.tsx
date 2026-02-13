@@ -21,7 +21,6 @@ function Dashboard({ onNavigate }: DashboardProps) {
   }, []);
 
   const loadData = async () => {
-    setLoading(false);
     try {
       const { count: sourcesCount } = await supabase
         .from('kb_sources')
@@ -62,6 +61,8 @@ function Dashboard({ onNavigate }: DashboardProps) {
       setRecentSources(sources || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

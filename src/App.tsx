@@ -38,6 +38,17 @@ function App() {
       backgroundColor: '#f3f4f6',
       width: '100%',
     }}>
+      <div style={{
+        padding: '20px',
+        backgroundColor: '#ffffff',
+        margin: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      }}>
+        <h1 style={{ color: '#1a1a1a', marginBottom: '10px' }}>Sistema Funcionando</h1>
+        <p style={{ color: '#6b7280' }}>Página atual: {currentPage}</p>
+      </div>
+
       <Navigation currentPage={currentPage} onNavigate={handleNavigate} />
 
       {currentPage === 'dashboard' && (
