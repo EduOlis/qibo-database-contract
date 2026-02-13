@@ -17,6 +17,8 @@ async function extractTextFromHTML(html: string): Promise<string> {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -47,7 +49,7 @@ Deno.serve(async (req: Request) => {
 
     if (!url) {
       return new Response(
-        JSON.stringify({ error: "URL is required" }),
+        JSON.stringify({ error: "URL é obrigatória" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,22 +57,61 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'Connection': 'keep-alive',
+        },
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return new Response(
+          JSON.stringify({
+            error: "Timeout ao acessar a URL (30s). O site pode estar lento ou inacessível.",
+            details: "Tente novamente ou use uma URL diferente."
+          }),
+          {
+            status: 408,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      throw fetchError;
     }
 
-    const contentType = response.headers.get('content-type') || '';
+    clearTimeout(timeoutId);
 
-    if (contentType.includes('application/pdf')) {
+    if (!response.ok) {
       return new Response(
         JSON.stringify({
-          error: "PDF URLs should be processed through the PDF extractor",
+          error: `Erro ao acessar URL: ${response.status} ${response.statusText}`,
+          details: "Verifique se a URL está correta e acessível."
+        }),
+        {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const responseContentType = response.headers.get('content-type') || '';
+
+    if (responseContentType.includes('application/pdf')) {
+      return new Response(
+        JSON.stringify({
+          error: "URLs de PDF devem ser processadas através do extrator de PDF",
           isPDF: true,
         }),
         {
@@ -81,13 +122,30 @@ Deno.serve(async (req: Request) => {
     }
 
     const html = await response.text();
-    const text = await extractTextFromHTML(html);
 
-    if (text.length < 100) {
+    if (!html || html.length < 50) {
       return new Response(
         JSON.stringify({
-          error: "Extracted text is too short. The page might require JavaScript or have access restrictions.",
+          error: "A página retornou conteúdo vazio ou muito curto",
+          details: "O site pode estar bloqueando o acesso automatizado ou a URL está incorreta.",
+          htmlLength: html.length,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const text = await extractTextFromHTML(html);
+
+    if (text.length < 50) {
+      return new Response(
+        JSON.stringify({
+          error: "Texto extraído é muito curto (menos de 50 caracteres)",
+          details: "A página pode exigir JavaScript para carregar o conteúdo, ter restrições de acesso, ou estar vazia.",
           extractedLength: text.length,
+          preview: text.substring(0, 200),
         }),
         {
           status: 400,
@@ -114,7 +172,8 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: error instanceof Error ? error.message : "Erro interno do servidor",
+        details: "Ocorreu um erro ao processar a URL. Verifique se a URL está correta e tente novamente.",
       }),
       {
         status: 500,
