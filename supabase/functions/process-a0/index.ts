@@ -288,13 +288,19 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        await supabase
+        const { error: updateError } = await supabase
           .from("kb_raw_chunks")
           .update({
             processed: true,
             processed_at: new Date().toISOString(),
           })
           .eq("id", chunk.id);
+
+        if (updateError) {
+          console.error(`Failed to mark chunk ${chunk.id} as processed:`, updateError);
+        } else {
+          console.log(`Successfully marked chunk ${chunk.id} as processed`);
+        }
 
       } catch (error) {
         console.error(`Error processing chunk ${chunk.id}:`, error);
