@@ -84,11 +84,13 @@ function ChunkViewer({ chunk }: ChunkViewerProps) {
         fontSize: '11px',
         color: '#6b7280',
       }}>
+        {chunk.text_hash && (
+          <div>
+            <strong>Hash:</strong> {chunk.text_hash.substring(0, 16)}...
+          </div>
+        )}
         <div>
-          <strong>Hash:</strong> {chunk.text_hash.substring(0, 16)}...
-        </div>
-        <div>
-          <strong>Tamanho:</strong> {chunk.raw_text.length} caracteres
+          <strong>Tamanho:</strong> {chunk.raw_text?.length || 0} caracteres
         </div>
       </div>
     </div>
