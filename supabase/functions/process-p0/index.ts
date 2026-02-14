@@ -159,6 +159,7 @@ Deno.serve(async (req: Request) => {
         notes: notes,
         file_name: actualFileName,
         file_path: filePath,
+        created_by: user.id,
       })
       .select()
       .single();
