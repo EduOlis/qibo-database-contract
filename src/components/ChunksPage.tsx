@@ -22,12 +22,15 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
 
   const loadData = async () => {
     try {
+      console.log('Loading data for sourceId:', sourceId);
+
       const { data: sourceData, error: sourceError } = await supabase
         .from('kb_sources')
         .select('*')
         .eq('id', sourceId)
         .single();
 
+      console.log('Source data:', sourceData, 'Error:', sourceError);
       if (sourceError) throw sourceError;
       setSource(sourceData);
 
@@ -37,10 +40,12 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
         .eq('source_id', sourceId)
         .order('sequence_number', { ascending: true });
 
+      console.log('Chunks data:', chunksData, 'Error:', chunksError);
       if (chunksError) throw chunksError;
       setChunks(chunksData || []);
     } catch (error) {
       console.error('Erro ao carregar chunks:', error);
+      alert(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }

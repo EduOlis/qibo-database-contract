@@ -22,12 +22,15 @@ function EvidencesPage({ sourceId, onBack }: EvidencesPageProps) {
 
   const loadData = async () => {
     try {
+      console.log('Loading evidences for sourceId:', sourceId);
+
       const { data: sourceData, error: sourceError } = await supabase
         .from('kb_sources')
         .select('*')
         .eq('id', sourceId)
         .single();
 
+      console.log('Source data:', sourceData, 'Error:', sourceError);
       if (sourceError) throw sourceError;
       setSource(sourceData);
 
@@ -37,10 +40,12 @@ function EvidencesPage({ sourceId, onBack }: EvidencesPageProps) {
         .eq('source_id', sourceId)
         .order('created_at', { ascending: false });
 
+      console.log('Evidences data:', evidencesData, 'Error:', evidencesError);
       if (evidencesError) throw evidencesError;
       setEvidences(evidencesData || []);
     } catch (error) {
       console.error('Erro ao carregar evidências:', error);
+      alert(`Erro ao carregar evidências: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
