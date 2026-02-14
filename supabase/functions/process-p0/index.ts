@@ -192,8 +192,14 @@ Deno.serve(async (req: Request) => {
       .insert(
         chunksToInsert.map(chunk => ({
           source_id: sourceId,
-          ...chunk,
+          raw_text: chunk.raw_text,
+          raw_text_hash: chunk.text_hash,
+          sequence_number: chunk.sequence_number,
+          language: chunk.language,
+          page_reference: chunk.page_reference,
           processed: false,
+          p0_version: "1.2.0",
+          execution_profile: executionProfile,
         }))
       );
 
