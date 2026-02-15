@@ -153,8 +153,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
       global: {
         headers: {
           Authorization: authHeader,
@@ -162,7 +163,7 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
       console.error("Auth error:", userError);
@@ -195,7 +196,7 @@ Deno.serve(async (req: Request) => {
     let chunksToProcess = [];
 
     if (chunkId) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("kb_raw_chunks")
         .select("*")
         .eq("id", chunkId)
@@ -213,7 +214,7 @@ Deno.serve(async (req: Request) => {
       }
       chunksToProcess = [data];
     } else if (sourceId) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("kb_raw_chunks")
         .select("*")
         .eq("source_id", sourceId)
@@ -267,7 +268,7 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          const { error: insertError } = await supabase
+          const { error: insertError } = await supabaseClient
             .from("kb_evidence_excerpts")
             .insert({
               source_id: chunk.source_id,
@@ -288,7 +289,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
           .from("kb_raw_chunks")
           .update({
             processed: true,
@@ -310,7 +311,7 @@ Deno.serve(async (req: Request) => {
     const executionTime = Date.now() - startTime;
 
     if (sourceId) {
-      await supabase
+      await supabaseClient
         .from("kb_document_pipeline_status")
         .update({
           a0_status: "completed",
@@ -320,7 +321,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("source_id", sourceId);
 
-      await supabase
+      await supabaseClient
         .from("kb_notifications")
         .insert({
           notification_type: "evidence_pending",
