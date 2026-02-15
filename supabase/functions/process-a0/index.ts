@@ -141,49 +141,10 @@ Deno.serve(async (req: Request) => {
   try {
     const startTime = Date.now();
 
-    const authHeader = req.headers.get("Authorization");
-    console.log("Auth header present:", !!authHeader);
-
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    console.log("Supabase URL:", supabaseUrl);
-    console.log("Service key present:", !!supabaseServiceKey);
-
-    const token = authHeader.replace("Bearer ", "");
-
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-
-    console.log("User validation result:", { user: !!user, error: userError?.message });
-
-    if (userError || !user) {
-      console.error("Auth error details:", JSON.stringify(userError, null, 2));
-      return new Response(
-        JSON.stringify({
-          error: "Unauthorized",
-          message: userError?.message || "Invalid JWT",
-          details: userError
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    console.log("User authenticated:", user.id);
 
     const requestData: A0Request = await req.json();
     const { chunkId, sourceId, profileId } = requestData;
