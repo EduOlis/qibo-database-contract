@@ -73,17 +73,21 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar');
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('Erro da API:', errorData);
+        throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
       }
 
-      alert(`Sucesso! ${data.evidencesCreated} evidências extraídas`);
+      const data = await response.json();
+      console.log('Resposta da API:', data);
+
+      alert(`Sucesso! ${data.evidencesCreated} evidências extraídas de ${data.chunksProcessed} chunks`);
       loadData();
     } catch (error) {
-      console.error('Erro:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao processar');
+      console.error('Erro detalhado:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar';
+      alert(`Erro ao processar: ${errorMessage}`);
     } finally {
       setProcessing(false);
     }
