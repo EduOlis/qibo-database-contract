@@ -142,6 +142,8 @@ Deno.serve(async (req: Request) => {
     const startTime = Date.now();
 
     const authHeader = req.headers.get("Authorization");
+    console.log("Auth header present:", !!authHeader);
+
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
@@ -155,18 +157,19 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
+    console.log("Supabase URL:", supabaseUrl);
+    console.log("Service key present:", !!supabaseServiceKey);
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const token = authHeader.replace("Bearer ", "");
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+
+    console.log("User validation result:", { user: !!user, error: userError?.message });
 
     if (userError || !user) {
-      console.error("Auth error:", userError);
+      console.error("Auth error details:", JSON.stringify(userError, null, 2));
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -179,6 +182,8 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    console.log("User authenticated:", user.id);
 
     const requestData: A0Request = await req.json();
     const { chunkId, sourceId, profileId } = requestData;
