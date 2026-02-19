@@ -344,16 +344,27 @@ Apenas numeração sequencial.
 
 FORMATO DE OUTPUT:
 
-Retorne exclusivamente JSON no formato:
+Retorne exclusivamente um JSON válido e bem formatado.
+
+IMPORTANTE: O campo "text" deve conter a frase original exata, preservando quebras de linha se existirem no original.
+Em JSON, quebras de linha devem ser representadas como caracteres literais de nova linha dentro da string JSON.
+
+Formato:
 
 [
   {
     "aspect": "bloco-01",
     "text": "frase original exata"
+  },
+  {
+    "aspect": "bloco-02",
+    "text": "segunda frase original exata"
   }
 ]
 
 Se houver 10 frases, devem existir 10 blocos.
+
+CRÍTICO: Retorne JSON válido e bem formatado. Use aspas duplas. Escape caracteres especiais corretamente.
 
 CHECK FINAL (AUTO-VERIFICAÇÃO):
 
