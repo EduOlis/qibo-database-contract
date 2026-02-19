@@ -14,6 +14,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
   const [processing, setProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRelevance, setFilterRelevance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [selectedChunks, setSelectedChunks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (sourceId) {
@@ -55,6 +56,15 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
   const handleProcessA0 = async () => {
     if (!sourceId) return;
 
+    const chunksToProcess = selectedChunks.size > 0
+      ? Array.from(selectedChunks)
+      : undefined;
+
+    if (chunksToProcess && chunksToProcess.length === 0) {
+      alert('Selecione pelo menos um chunk para processar');
+      return;
+    }
+
     setProcessing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -71,6 +81,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
         body: JSON.stringify({
           sourceId: sourceId,
           profileId: 'a0-basic-v1',
+          chunkIds: chunksToProcess,
         }),
       });
 
@@ -84,6 +95,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
       console.log('Resposta da API:', data);
 
       alert(`Sucesso! ${data.evidencesCreated} evidências extraídas de ${data.chunksProcessed} chunks`);
+      setSelectedChunks(new Set());
       loadData();
     } catch (error) {
       console.error('Erro detalhado:', error);
@@ -106,6 +118,27 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
     } catch (error) {
       console.error('Erro ao atualizar skip:', error);
       alert('Erro ao atualizar chunk');
+    }
+  };
+
+  const handleToggleChunkSelection = (chunkId: string) => {
+    setSelectedChunks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(chunkId)) {
+        newSet.delete(chunkId);
+      } else {
+        newSet.add(chunkId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const unprocessedChunks = chunks.filter(c => !c.processed && !c.skip_processing);
+    if (selectedChunks.size === unprocessedChunks.length) {
+      setSelectedChunks(new Set());
+    } else {
+      setSelectedChunks(new Set(unprocessedChunks.map(c => c.id)));
     }
   };
 
@@ -217,6 +250,24 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
             <option value="low">Baixa (&lt; 35%)</option>
           </select>
           <button
+            onClick={handleSelectAll}
+            disabled={chunks.filter(c => !c.processed && !c.skip_processing).length === 0}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: '#6366f1',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: chunks.filter(c => !c.processed && !c.skip_processing).length === 0 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {selectedChunks.size === chunks.filter(c => !c.processed && !c.skip_processing).length && selectedChunks.size > 0
+              ? 'Desmarcar Todos'
+              : 'Selecionar Todos'}
+          </button>
+          <button
             onClick={handleProcessA0}
             disabled={processing || chunks.filter(c => !c.processed && !c.skip_processing).length === 0}
             style={{
@@ -230,7 +281,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
               cursor: processing || chunks.filter(c => !c.processed && !c.skip_processing).length === 0 ? 'not-allowed' : 'pointer',
             }}
           >
-            {processing ? 'Processando...' : 'Extrair Evidências (A0)'}
+            {processing ? 'Processando...' : selectedChunks.size > 0 ? `Extrair de ${selectedChunks.size} Selecionados` : 'Extrair de Todos'}
           </button>
         </div>
 
@@ -256,6 +307,11 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
           <div>
             <strong>Pulados:</strong> {chunks.filter(c => c.skip_processing).length}
           </div>
+          {selectedChunks.size > 0 && (
+            <div style={{ color: '#6366f1', fontWeight: '600' }}>
+              <strong>Selecionados:</strong> {selectedChunks.size}
+            </div>
+          )}
           <div style={{ color: '#10b981' }}>
             <strong>Alta Relevância:</strong> {chunks.filter(c => (c.relevance_score || 0) >= 0.65).length}
           </div>
@@ -274,6 +330,8 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
             key={chunk.id}
             chunk={chunk}
             onToggleSkip={handleToggleSkip}
+            isSelected={selectedChunks.has(chunk.id)}
+            onToggleSelection={handleToggleChunkSelection}
           />
         ))}
         {filteredChunks.length === 0 && (

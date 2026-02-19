@@ -12,9 +12,11 @@ interface ChunkViewerProps {
     skip_processing?: boolean;
   };
   onToggleSkip?: (chunkId: string, currentValue: boolean) => void;
+  isSelected?: boolean;
+  onToggleSelection?: (chunkId: string) => void;
 }
 
-function ChunkViewer({ chunk, onToggleSkip }: ChunkViewerProps) {
+function ChunkViewer({ chunk, onToggleSkip, isSelected, onToggleSelection }: ChunkViewerProps) {
   const getRelevanceColor = (score: number) => {
     if (score >= 0.65) return { bg: '#d1fae5', text: '#065f46', label: 'Alta' };
     if (score >= 0.35) return { bg: '#fef3c7', text: '#92400e', label: 'Média' };
@@ -25,11 +27,12 @@ function ChunkViewer({ chunk, onToggleSkip }: ChunkViewerProps) {
   const relevanceInfo = getRelevanceColor(relevanceScore);
   return (
     <div style={{
-      backgroundColor: '#f9fafb',
-      border: '1px solid #e5e7eb',
+      backgroundColor: isSelected ? '#ede9fe' : '#f9fafb',
+      border: isSelected ? '2px solid #6366f1' : '1px solid #e5e7eb',
       borderRadius: '8px',
       padding: '20px',
       marginBottom: '16px',
+      transition: 'all 0.2s ease',
     }}>
       <div style={{
         display: 'flex',
@@ -37,15 +40,30 @@ function ChunkViewer({ chunk, onToggleSkip }: ChunkViewerProps) {
         alignItems: 'flex-start',
         marginBottom: '16px',
       }}>
-        <div>
-          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
-            Chunk #{chunk.sequence_number}
-          </div>
-          {chunk.page_reference && (
-            <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-              Referência: {chunk.page_reference}
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {!chunk.processed && onToggleSelection && (
+            <input
+              type="checkbox"
+              checked={isSelected || false}
+              onChange={() => onToggleSelection(chunk.id)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#6366f1',
+              }}
+            />
           )}
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Chunk #{chunk.sequence_number}
+            </div>
+            {chunk.page_reference && (
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                Referência: {chunk.page_reference}
+              </div>
+            )}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{

@@ -11,6 +11,7 @@ interface A0Request {
   chunkId?: string;
   sourceId?: string;
   profileId: string;
+  chunkIds?: string[];
 }
 
 const A0_SYSTEM_PROMPT = `Você é um assistente especializado em extrair trechos literais de textos. Retorne sempre JSON válido.`;
@@ -171,11 +172,11 @@ Deno.serve(async (req: Request) => {
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData: A0Request = await req.json();
-    const { chunkId, sourceId, profileId } = requestData;
+    const { chunkId, sourceId, profileId, chunkIds } = requestData;
 
-    if (!profileId || (!chunkId && !sourceId)) {
+    if (!profileId || (!chunkId && !sourceId && !chunkIds)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: profileId and (chunkId or sourceId)" }),
+        JSON.stringify({ error: "Missing required fields: profileId and (chunkId, chunkIds or sourceId)" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -203,6 +204,18 @@ Deno.serve(async (req: Request) => {
         );
       }
       chunksToProcess = [data];
+    } else if (chunkIds && chunkIds.length > 0) {
+      const { data, error } = await supabaseClient
+        .from("kb_raw_chunks")
+        .select("*")
+        .in("id", chunkIds)
+        .eq("processed", false)
+        .eq("skip_processing", false);
+
+      if (error) {
+        throw new Error(`Failed to fetch chunks: ${error.message}`);
+      }
+      chunksToProcess = data || [];
     } else if (sourceId) {
       const { data, error } = await supabaseClient
         .from("kb_raw_chunks")
