@@ -391,12 +391,26 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     const content = await llmProvider.callAPI(systemPrompt, userPrompt);
 
+    console.log("LLM raw response:", content);
+
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      throw new Error("Invalid response format from LLM");
+      console.error("Failed to extract JSON from LLM response");
+      throw new Error(`Invalid response format from LLM. Response preview: ${content.substring(0, 500)}`);
     }
 
-    const parsedBlocks: A1Block[] = JSON.parse(jsonMatch[0]);
+    let parsedBlocks: A1Block[];
+    try {
+      parsedBlocks = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      console.error("Attempted to parse:", jsonMatch[0]);
+      throw new Error(`Failed to parse LLM JSON response: ${parseError.message}`);
+    }
+
+    if (!Array.isArray(parsedBlocks) || parsedBlocks.length === 0) {
+      throw new Error("LLM returned empty or invalid block array");
+    }
 
     let clustersCreated = 0;
 
