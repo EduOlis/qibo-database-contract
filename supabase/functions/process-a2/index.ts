@@ -158,7 +158,8 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: authHeader,
@@ -166,7 +167,7 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
       console.error("Auth error:", userError);
@@ -182,6 +183,9 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData: A2Request = await req.json();
     const { sourceId } = requestData;
