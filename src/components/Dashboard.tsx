@@ -242,6 +242,23 @@ function Dashboard({ onNavigate }: DashboardProps) {
             </button>
 
             <button
+              onClick={() => onNavigate('pipeline')}
+              style={{
+                padding: '16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              ⚙️ Processar Pipeline (A1/A2)
+            </button>
+
+            <button
               onClick={() => onNavigate('validate')}
               style={{
                 padding: '16px',
