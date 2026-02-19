@@ -346,8 +346,10 @@ FORMATO DE OUTPUT:
 
 Retorne exclusivamente um JSON válido e bem formatado.
 
-IMPORTANTE: O campo "text" deve conter a frase original exata, preservando quebras de linha se existirem no original.
-Em JSON, quebras de linha devem ser representadas como caracteres literais de nova linha dentro da string JSON.
+IMPORTANTE:
+- O campo "text" deve conter a frase original exata, preservando quebras de linha se existirem no original.
+- Em JSON, quebras de linha DEVEM ser escapadas como \\n (barra invertida seguida de n).
+- NUNCA coloque quebras de linha literais (caractere newline) dentro de strings JSON - isso torna o JSON inválido.
 
 Formato:
 
@@ -364,7 +366,11 @@ Formato:
 
 Se houver 10 frases, devem existir 10 blocos.
 
-CRÍTICO: Retorne JSON válido e bem formatado. Use aspas duplas. Escape caracteres especiais corretamente.
+CRÍTICO:
+- Retorne JSON válido e bem formatado
+- Use aspas duplas
+- Escape caracteres especiais corretamente (\\n para quebra de linha, \\" para aspas, \\\\ para barra invertida)
+- NUNCA coloque quebras de linha literais dentro de strings JSON
 
 CHECK FINAL (AUTO-VERIFICAÇÃO):
 
@@ -430,53 +436,12 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       console.log("JSON string length:", jsonString.length);
       console.log("First 200 chars:", jsonString.substring(0, 200));
 
-      // Try to parse the JSON directly first
-      try {
-        parsedBlocks = JSON.parse(jsonString);
-        console.log("Successfully parsed blocks:", parsedBlocks.length);
-      } catch (firstError) {
-        console.log("Standard JSON.parse failed, attempting manual extraction...");
-        console.error("Parse error was:", firstError.message);
-
-        // Manual extraction using a different approach
-        // Split by }, { pattern and extract each block
-        parsedBlocks = [];
-
-        // Remove the outer brackets
-        const innerJson = jsonString.substring(1, jsonString.length - 1).trim();
-
-        // Split by },{ or }, { patterns
-        const blockStrings = innerJson.split(/\}\s*,\s*\{/);
-
-        for (let i = 0; i < blockStrings.length; i++) {
-          let blockStr = blockStrings[i];
-
-          // Add back the braces if they were removed by split
-          if (!blockStr.startsWith('{')) blockStr = '{' + blockStr;
-          if (!blockStr.endsWith('}')) blockStr = blockStr + '}';
-
-          // Try to extract aspect and text manually
-          const aspectMatch = blockStr.match(/"aspect"\s*:\s*"([^"]+)"/);
-          const textMatch = blockStr.match(/"text"\s*:\s*"([\s\S]+?)"\s*\}/);
-
-          if (aspectMatch && textMatch) {
-            parsedBlocks.push({
-              aspect: aspectMatch[1],
-              text: textMatch[1]
-            });
-          }
-        }
-
-        if (parsedBlocks.length === 0) {
-          throw new Error(`Could not parse any blocks. First error: ${firstError.message}`);
-        }
-
-        console.log("Manual extraction successful, found blocks:", parsedBlocks.length);
-      }
+      parsedBlocks = JSON.parse(jsonString);
+      console.log("Successfully parsed blocks:", parsedBlocks.length);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
-      console.error("Attempted to parse:", jsonMatch[0].substring(0, 1000));
-      throw new Error(`Failed to parse LLM JSON response: ${parseError.message}`);
+      console.error("Attempted to parse (first 1000 chars):", jsonMatch[0].substring(0, 1000));
+      throw new Error(`Failed to parse LLM JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
     if (!Array.isArray(parsedBlocks) || parsedBlocks.length === 0) {
