@@ -415,25 +415,15 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       let jsonString = jsonMatch[0];
 
       console.log("JSON string length:", jsonString.length);
-      console.log("First 500 chars:", jsonString.substring(0, 500));
+      console.log("First 200 chars:", jsonString.substring(0, 200));
 
-      // Clean up the JSON string before parsing
-      // The LLM might return \\n as literal text instead of escape sequence
-      // We need to fix this without breaking actual escape sequences
-
-      // First, let's try a more sophisticated approach
-      // Replace literal "\n" (backslash-n as text) with actual newline character
-      jsonString = jsonString.replace(/\\n/g, '\n');
-
-      console.log("After cleanup, first 500 chars:", jsonString.substring(0, 500));
-
-      // Now try to parse
+      // Try to parse the JSON directly first
       try {
         parsedBlocks = JSON.parse(jsonString);
         console.log("Successfully parsed blocks:", parsedBlocks.length);
       } catch (firstError) {
-        console.log("Standard parse failed, attempting manual extraction...");
-        console.error("Parse error was:", firstError);
+        console.log("Standard JSON.parse failed, attempting manual extraction...");
+        console.error("Parse error was:", firstError.message);
 
         // Manual extraction using a different approach
         // Split by }, { pattern and extract each block
