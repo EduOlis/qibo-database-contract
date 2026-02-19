@@ -546,12 +546,17 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
     );
 
   } catch (error) {
-    console.error('Error in process-a1:', error);
+    console.error('=== ERROR IN PROCESS-A1 ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
     return new Response(
       JSON.stringify({
         error: error.message || "Internal server error",
-        details: error.toString()
+        details: error.toString(),
+        stack: error.stack
       }),
       {
         status: 500,

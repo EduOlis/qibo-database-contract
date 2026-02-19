@@ -83,7 +83,26 @@ function PipelinePage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+        console.error('=== ERRO HTTP A1 ===');
+        console.error('Status:', response.status);
+        console.error('Response body:', errorText);
+
+        let errorMessage = `Erro HTTP ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('Parsed error:', errorJson);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+          if (errorJson.details) {
+            console.error('Error details:', errorJson.details);
+          }
+          if (errorJson.stack) {
+            console.error('Error stack:', errorJson.stack);
+          }
+        } catch (parseError) {
+          errorMessage = errorText.substring(0, 500);
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -92,7 +111,13 @@ function PipelinePage() {
       alert(`A1 processado com sucesso! ${result.clustersCreated || 0} clusters criados.`);
       await loadData();
     } catch (error) {
-      console.error('Erro ao processar A1:', error);
+      console.error('=== ERRO AO PROCESSAR A1 ===');
+      if (error instanceof Error) {
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+      }
+      console.error('Full error:', error);
+
       alert(`Erro ao processar A1: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setProcessing({ ...processing, [`a1-${sourceId}`]: false });
