@@ -62,16 +62,24 @@ function detectLanguage(text: string): string {
   return 'unknown';
 }
 
-async function chunkText(text: string, maxChunkSize: number = 2000): Promise<string[]> {
+async function chunkText(text: string, minChunkSize: number = 1000, maxChunkSize: number = 3000): Promise<string[]> {
   const chunks: string[] = [];
   const paragraphs = text.split(/\n\n+/);
 
   let currentChunk = '';
 
   for (const paragraph of paragraphs) {
-    if (currentChunk.length + paragraph.length > maxChunkSize && currentChunk.length > 0) {
+    const potentialLength = currentChunk.length + paragraph.length + (currentChunk.length > 0 ? 2 : 0);
+
+    if (potentialLength > maxChunkSize && currentChunk.length >= minChunkSize) {
       chunks.push(currentChunk.trim());
       currentChunk = paragraph;
+    } else if (potentialLength > maxChunkSize && currentChunk.length < minChunkSize) {
+      currentChunk += (currentChunk.length > 0 ? '\n\n' : '') + paragraph;
+      if (currentChunk.length >= minChunkSize) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      }
     } else {
       currentChunk += (currentChunk.length > 0 ? '\n\n' : '') + paragraph;
     }
@@ -82,6 +90,56 @@ async function chunkText(text: string, maxChunkSize: number = 2000): Promise<str
   }
 
   return chunks;
+}
+
+function calculateRelevanceScore(text: string): number {
+  const lowerText = text.toLowerCase();
+
+  const tcmKeywords = [
+    'síndrome', 'sindrome', 'syndrome',
+    'sintoma', 'sintomas', 'symptom', 'symptoms',
+    'sinal clínico', 'sinais clínicos', 'clinical sign',
+    'princípio terapêutico', 'principio terapeutico', 'therapeutic principle',
+    'acuponto', 'acupontos', 'acupoint', 'acupoints', 'ponto',
+    'qi', 'yin', 'yang', 'meridiano', 'meridian',
+    'baço', 'fígado', 'rim', 'coração', 'pulmão', 'estômago',
+    'spleen', 'liver', 'kidney', 'heart', 'lung', 'stomach',
+    'agulha', 'needle', 'moxabustão', 'moxa', 'ventosa',
+    'deficiência', 'excesso', 'estagnação', 'umidade', 'calor', 'frio',
+    'deficiency', 'excess', 'stagnation', 'dampness', 'heat', 'cold',
+    'tonificar', 'dispersar', 'regular', 'harmonizar',
+    'tonify', 'disperse', 'regulate', 'harmonize',
+    'diagnóstico', 'tratamento', 'terapia', 'medicina chinesa', 'tcm',
+    'diagnosis', 'treatment', 'therapy', 'chinese medicine'
+  ];
+
+  let matchCount = 0;
+  let totalKeywordChars = 0;
+
+  for (const keyword of tcmKeywords) {
+    const regex = new RegExp(keyword, 'gi');
+    const matches = lowerText.match(regex);
+    if (matches) {
+      matchCount += matches.length;
+      totalKeywordChars += matches.length * keyword.length;
+    }
+  }
+
+  const keywordDensity = totalKeywordChars / text.length;
+  const keywordFrequency = matchCount / (text.length / 100);
+
+  let score = (keywordDensity * 0.6) + (keywordFrequency * 0.4);
+
+  score = Math.min(1.0, Math.max(0.0, score));
+
+  if (score > 0.8) score = 0.95;
+  else if (score > 0.6) score = 0.80;
+  else if (score > 0.4) score = 0.65;
+  else if (score > 0.2) score = 0.50;
+  else if (score > 0.1) score = 0.35;
+  else score = 0.20;
+
+  return score;
 }
 
 Deno.serve(async (req: Request) => {
@@ -201,6 +259,9 @@ Deno.serve(async (req: Request) => {
           processed: false,
           p0_version: "1.2.0",
           execution_profile: executionProfile,
+          relevance_score: calculateRelevanceScore(chunk.raw_text),
+          relevance_calculated_at: new Date().toISOString(),
+          skip_processing: false,
         }))
       );
 

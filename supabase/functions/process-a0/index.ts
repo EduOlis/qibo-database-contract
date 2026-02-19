@@ -15,30 +15,54 @@ interface A0Request {
 
 const A0_SYSTEM_PROMPT = `Você é um assistente especializado em extrair trechos literais de textos. Retorne sempre JSON válido.`;
 
-const A0_PROMPT = `Você é o agente A0 - Extração Literal de Evidências.
+const A0_PROMPT = `Você é o agente A0 - Extração Literal de Evidências para Medicina Tradicional Chinesa (MTC).
 
 RESPONSABILIDADE EXCLUSIVA:
-Identificar e extrair substrings LITERAIS relevantes do texto fornecido.
+Identificar e extrair substrings LITERAIS relevantes do texto fornecido, focando em: Síndromes, Sintomas, Sinais Clínicos, Princípios Terapêuticos e Acupontos.
 
 REGRAS ABSOLUTAS:
 1. NUNCA parafrasear, resumir ou modificar o texto
 2. Extrair APENAS substrings que existem EXATAMENTE como aparecem no texto
 3. Cada excerpt DEVE ser uma substring literal verificável
 4. NÃO interpretar, NÃO inferir, NÃO adicionar contexto
-5. NÃO criar entidades ou relações
+5. NÃO criar relações entre entidades (isso será feito posteriormente)
 6. NÃO normalizar terminologia
+
+TIPOS DE ENTIDADES A EXTRAIR:
+- syndrome: Padrões diagnósticos da MTC (ex: "Deficiência de Qi do Baço")
+- symptom: Sintomas subjetivos relatados pelo paciente (ex: "dor de cabeça", "tontura")
+- clinical_sign: Sinais objetivos observáveis (ex: "língua pálida", "pulso fraco")
+- acupoint: Pontos de acupuntura (ex: "Estômago 36", "E36", "Zusanli")
+- therapeutic_principle: Princípios de tratamento (ex: "tonificar o Qi", "dispersar o Calor")
 
 Para cada trecho relevante identificado, extraia:
 - excerpt_text: substring LITERAL do texto original
-- suggested_entity_type: uma das opções (symptom, syndrome, clinical_sign, acupoint, therapeutic_principle, other)
+- suggested_entity_type: uma das opções acima
 - relevance_score: 0.0 a 1.0
 - justification: breve explicação de por que este trecho é relevante
+- structured_data: objeto JSON com dados estruturados específicos por tipo:
+  * syndrome: { "name_pt": "...", "name_cn": "...", "organ_system": "..." }
+  * symptom: { "name_pt": "...", "description": "..." }
+  * clinical_sign: { "name_pt": "...", "sign_type": "tongue|pulse|complexion|other", "description": "..." }
+  * acupoint: { "code": "...", "name_pt": "...", "name_cn": "...", "meridian": "..." }
+  * therapeutic_principle: { "name": "...", "description": "..." }
 
 TEXTO PARA ANÁLISE:
 {chunk_text}
 
 Retorne um objeto JSON no formato: { "excerpts": [ ... ] }
-Exemplo: { "excerpts": [{ "excerpt_text": "...", "suggested_entity_type": "...", "relevance_score": 0.9, "justification": "..." }] }`;
+Exemplo: {
+  "excerpts": [{
+    "excerpt_text": "Deficiência de Qi do Baço",
+    "suggested_entity_type": "syndrome",
+    "relevance_score": 0.95,
+    "justification": "Menciona síndrome diagnóstica específica da MTC",
+    "structured_data": {
+      "name_pt": "Deficiência de Qi do Baço",
+      "organ_system": "Baço"
+    }
+  }]
+}`;
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
   const model = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
@@ -184,7 +208,8 @@ Deno.serve(async (req: Request) => {
         .from("kb_raw_chunks")
         .select("*")
         .eq("source_id", sourceId)
-        .eq("processed", false);
+        .eq("processed", false)
+        .eq("skip_processing", false);
 
       if (error) {
         throw new Error(`Failed to fetch chunks: ${error.message}`);
@@ -234,7 +259,7 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          const { error: insertError } = await supabaseClient
+          const { data: evidenceData, error: insertError } = await supabaseClient
             .from("kb_evidence_excerpts")
             .insert({
               source_id: chunk.source_id,
@@ -246,10 +271,46 @@ Deno.serve(async (req: Request) => {
               language: chunk.language,
               page_reference: chunk.page_reference,
               status: "pending",
-            });
+            })
+            .select()
+            .single();
 
-          if (!insertError) {
+          if (!insertError && evidenceData) {
             totalEvidences++;
+
+            const entityType = excerpt.suggested_entity_type;
+            if (entityType && entityType !== "other" && excerpt.structured_data) {
+              const structuredData = excerpt.structured_data;
+              let entityLabel = "";
+
+              if (entityType === "syndrome" && structuredData.name_pt) {
+                entityLabel = structuredData.name_pt;
+              } else if (entityType === "symptom" && structuredData.name_pt) {
+                entityLabel = structuredData.name_pt;
+              } else if (entityType === "clinical_sign" && structuredData.name_pt) {
+                entityLabel = structuredData.name_pt;
+              } else if (entityType === "acupoint" && (structuredData.name_pt || structuredData.code)) {
+                entityLabel = structuredData.name_pt || structuredData.code;
+              } else if (entityType === "therapeutic_principle" && structuredData.name) {
+                entityLabel = structuredData.name;
+              }
+
+              if (entityLabel) {
+                await supabaseClient
+                  .from("kb_extracted_entities")
+                  .insert({
+                    evidence_id: evidenceData.id,
+                    source_id: chunk.source_id,
+                    entity_type: entityType,
+                    entity_label: entityLabel,
+                    entity_data: structuredData,
+                    confidence_score: excerpt.relevance_score || 0.5,
+                    extraction_rationale: excerpt.justification || "",
+                    status: "pending",
+                    agent_version: "a0-v1.2.0",
+                  });
+              }
+            }
           } else {
             console.error("Failed to insert evidence:", insertError);
           }

@@ -13,6 +13,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterRelevance, setFilterRelevance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
   useEffect(() => {
     if (sourceId) {
@@ -93,9 +94,36 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
     }
   };
 
-  const filteredChunks = chunks.filter(chunk =>
-    chunk.raw_text.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleToggleSkip = async (chunkId: string, currentSkipValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('kb_raw_chunks')
+        .update({ skip_processing: !currentSkipValue })
+        .eq('id', chunkId);
+
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Erro ao atualizar skip:', error);
+      alert('Erro ao atualizar chunk');
+    }
+  };
+
+  const filteredChunks = chunks
+    .filter(chunk => {
+      const matchesSearch = chunk.raw_text.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+      if (filterRelevance === 'all') return true;
+
+      const score = chunk.relevance_score || 0;
+      if (filterRelevance === 'high') return score >= 0.65;
+      if (filterRelevance === 'medium') return score >= 0.35 && score < 0.65;
+      if (filterRelevance === 'low') return score < 0.35;
+
+      return true;
+    })
+    .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
 
   if (loading) {
     return (
@@ -171,9 +199,26 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
               borderRadius: '6px',
             }}
           />
+          <select
+            value={filterRelevance}
+            onChange={(e) => setFilterRelevance(e.target.value as any)}
+            style={{
+              padding: '10px 14px',
+              fontSize: '14px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">Todas Relevâncias</option>
+            <option value="high">Alta (&ge; 65%)</option>
+            <option value="medium">Média (35-64%)</option>
+            <option value="low">Baixa (&lt; 35%)</option>
+          </select>
           <button
             onClick={handleProcessA0}
-            disabled={processing || chunks.filter(c => !c.processed).length === 0}
+            disabled={processing || chunks.filter(c => !c.processed && !c.skip_processing).length === 0}
             style={{
               padding: '10px 20px',
               fontSize: '14px',
@@ -182,7 +227,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
               color: 'white',
               border: 'none',
               borderRadius: '6px',
-              cursor: processing || chunks.filter(c => !c.processed).length === 0 ? 'not-allowed' : 'pointer',
+              cursor: processing || chunks.filter(c => !c.processed && !c.skip_processing).length === 0 ? 'not-allowed' : 'pointer',
             }}
           >
             {processing ? 'Processando...' : 'Extrair Evidências (A0)'}
@@ -197,6 +242,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
           padding: '12px',
           backgroundColor: '#f9fafb',
           borderRadius: '6px',
+          flexWrap: 'wrap',
         }}>
           <div>
             <strong>Total:</strong> {chunks.length} chunks
@@ -205,14 +251,30 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
             <strong>Processados:</strong> {chunks.filter(c => c.processed).length}
           </div>
           <div>
-            <strong>Pendentes:</strong> {chunks.filter(c => !c.processed).length}
+            <strong>Pendentes:</strong> {chunks.filter(c => !c.processed && !c.skip_processing).length}
+          </div>
+          <div>
+            <strong>Pulados:</strong> {chunks.filter(c => c.skip_processing).length}
+          </div>
+          <div style={{ color: '#10b981' }}>
+            <strong>Alta Relevância:</strong> {chunks.filter(c => (c.relevance_score || 0) >= 0.65).length}
+          </div>
+          <div style={{ color: '#f59e0b' }}>
+            <strong>Média:</strong> {chunks.filter(c => (c.relevance_score || 0) >= 0.35 && (c.relevance_score || 0) < 0.65).length}
+          </div>
+          <div style={{ color: '#ef4444' }}>
+            <strong>Baixa:</strong> {chunks.filter(c => (c.relevance_score || 0) < 0.35).length}
           </div>
         </div>
       </div>
 
       <div>
         {filteredChunks.map((chunk) => (
-          <ChunkViewer key={chunk.id} chunk={chunk} />
+          <ChunkViewer
+            key={chunk.id}
+            chunk={chunk}
+            onToggleSkip={handleToggleSkip}
+          />
         ))}
         {filteredChunks.length === 0 && (
           <div style={{

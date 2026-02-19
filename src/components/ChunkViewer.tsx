@@ -8,10 +8,21 @@ interface ChunkViewerProps {
     page_reference?: string;
     processed: boolean;
     created_at: string;
+    relevance_score?: number;
+    skip_processing?: boolean;
   };
+  onToggleSkip?: (chunkId: string, currentValue: boolean) => void;
 }
 
-function ChunkViewer({ chunk }: ChunkViewerProps) {
+function ChunkViewer({ chunk, onToggleSkip }: ChunkViewerProps) {
+  const getRelevanceColor = (score: number) => {
+    if (score >= 0.65) return { bg: '#d1fae5', text: '#065f46', label: 'Alta' };
+    if (score >= 0.35) return { bg: '#fef3c7', text: '#92400e', label: 'Média' };
+    return { bg: '#fee2e2', text: '#991b1b', label: 'Baixa' };
+  };
+
+  const relevanceScore = chunk.relevance_score || 0;
+  const relevanceInfo = getRelevanceColor(relevanceScore);
   return (
     <div style={{
       backgroundColor: '#f9fafb',
@@ -36,7 +47,17 @@ function ChunkViewer({ chunk }: ChunkViewerProps) {
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '11px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            backgroundColor: relevanceInfo.bg,
+            color: relevanceInfo.text,
+            fontWeight: '600',
+          }}>
+            {relevanceInfo.label} ({Math.round(relevanceScore * 100)}%)
+          </span>
           <span style={{
             fontSize: '11px',
             padding: '4px 8px',
@@ -51,12 +72,29 @@ function ChunkViewer({ chunk }: ChunkViewerProps) {
             fontSize: '11px',
             padding: '4px 8px',
             borderRadius: '4px',
-            backgroundColor: chunk.processed ? '#d1fae5' : '#fef3c7',
-            color: chunk.processed ? '#065f46' : '#92400e',
+            backgroundColor: chunk.processed ? '#d1fae5' : chunk.skip_processing ? '#e5e7eb' : '#fef3c7',
+            color: chunk.processed ? '#065f46' : chunk.skip_processing ? '#6b7280' : '#92400e',
             fontWeight: '500',
           }}>
-            {chunk.processed ? 'Processado' : 'Pendente'}
+            {chunk.processed ? 'Processado' : chunk.skip_processing ? 'Pulado' : 'Pendente'}
           </span>
+          {!chunk.processed && onToggleSkip && (
+            <button
+              onClick={() => onToggleSkip(chunk.id, chunk.skip_processing || false)}
+              style={{
+                fontSize: '11px',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid #d1d5db',
+                backgroundColor: 'white',
+                color: '#374151',
+                cursor: 'pointer',
+                fontWeight: '500',
+              }}
+            >
+              {chunk.skip_processing ? 'Desmarcar' : 'Pular'}
+            </button>
+          )}
         </div>
       </div>
 
