@@ -102,10 +102,34 @@ function IngestPage({ onBack }: IngestPageProps) {
     setResult(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Erro ao obter sessão: ' + sessionError.message);
+      }
 
       if (!session) {
         throw new Error('Você precisa estar autenticado');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+
+      if (expiresAt - now < 60) {
+        console.log('Token expirando, renovando sessão...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError) {
+          console.error('Refresh error:', refreshError);
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        }
+
+        if (!refreshData.session) {
+          throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
+        }
+
+        session.access_token = refreshData.session.access_token;
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-p0`;
