@@ -79,11 +79,13 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
       if (chunksToProcess) {
         for (const chunkId of chunksToProcess) {
           try {
+            console.log(`Processando chunk ${chunkId}...`);
             const response = await fetch(apiUrl, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,
                 'Content-Type': 'application/json',
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
               },
               body: JSON.stringify({
                 chunkId: chunkId,
@@ -92,13 +94,16 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
             });
 
             if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ error: response.statusText }));
-              console.error(`Erro ao processar chunk ${chunkId}:`, errorData);
+              const errorText = await response.text();
+              console.error(`Erro ao processar chunk ${chunkId}:`, errorText);
+              const errorData = { error: errorText, status: response.status };
+              console.error('Error data:', errorData);
               failedCount++;
               continue;
             }
 
             const data = await response.json();
+            console.log(`Chunk ${chunkId} processado:`, data);
             totalEvidences += data.evidencesCreated || 0;
             processedCount++;
 
@@ -114,6 +119,7 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             sourceId: sourceId,
