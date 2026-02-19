@@ -414,43 +414,62 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
     try {
       let jsonString = jsonMatch[0];
 
-      // Fix common JSON formatting issues from LLM
-      // Replace literal \n in strings with actual newlines
-      jsonString = jsonString.replace(/\\\\n/g, '\\n');
+      console.log("JSON string length:", jsonString.length);
+      console.log("First 500 chars:", jsonString.substring(0, 500));
 
-      // Try to parse with JSONrepair-like cleanup
+      // Clean up the JSON string before parsing
+      // The LLM might return \\n as literal text instead of escape sequence
+      // We need to fix this without breaking actual escape sequences
+
+      // First, let's try a more sophisticated approach
+      // Replace literal "\n" (backslash-n as text) with actual newline character
+      jsonString = jsonString.replace(/\\n/g, '\n');
+
+      console.log("After cleanup, first 500 chars:", jsonString.substring(0, 500));
+
+      // Now try to parse
       try {
         parsedBlocks = JSON.parse(jsonString);
+        console.log("Successfully parsed blocks:", parsedBlocks.length);
       } catch (firstError) {
-        console.log("First parse failed, attempting cleanup...");
+        console.log("Standard parse failed, attempting manual extraction...");
+        console.error("Parse error was:", firstError);
 
-        // More aggressive cleanup: parse string manually
-        const blockMatches = jsonString.matchAll(/\{\s*"aspect"\s*:\s*"([^"]+)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}/gs);
+        // Manual extraction using a different approach
+        // Split by }, { pattern and extract each block
         parsedBlocks = [];
 
-        for (const match of blockMatches) {
-          const aspect = match[1];
-          let text = match[2];
+        // Remove the outer brackets
+        const innerJson = jsonString.substring(1, jsonString.length - 1).trim();
 
-          // Properly decode escape sequences
-          text = text
-            .replace(/\\n/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\r/g, '\r')
-            .replace(/\\"/g, '"')
-            .replace(/\\\\/g, '\\');
+        // Split by },{ or }, { patterns
+        const blockStrings = innerJson.split(/\}\s*,\s*\{/);
 
-          parsedBlocks.push({ aspect, text });
+        for (let i = 0; i < blockStrings.length; i++) {
+          let blockStr = blockStrings[i];
+
+          // Add back the braces if they were removed by split
+          if (!blockStr.startsWith('{')) blockStr = '{' + blockStr;
+          if (!blockStr.endsWith('}')) blockStr = blockStr + '}';
+
+          // Try to extract aspect and text manually
+          const aspectMatch = blockStr.match(/"aspect"\s*:\s*"([^"]+)"/);
+          const textMatch = blockStr.match(/"text"\s*:\s*"([\s\S]+?)"\s*\}/);
+
+          if (aspectMatch && textMatch) {
+            parsedBlocks.push({
+              aspect: aspectMatch[1],
+              text: textMatch[1]
+            });
+          }
         }
 
         if (parsedBlocks.length === 0) {
-          throw firstError;
+          throw new Error(`Could not parse any blocks. First error: ${firstError.message}`);
         }
 
-        console.log("Manual parse successful, extracted blocks:", parsedBlocks.length);
+        console.log("Manual extraction successful, found blocks:", parsedBlocks.length);
       }
-
-      console.log("Successfully parsed blocks:", parsedBlocks.length);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
       console.error("Attempted to parse:", jsonMatch[0].substring(0, 1000));
