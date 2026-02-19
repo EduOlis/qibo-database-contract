@@ -412,7 +412,44 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     let parsedBlocks: A1Block[];
     try {
-      parsedBlocks = JSON.parse(jsonMatch[0]);
+      let jsonString = jsonMatch[0];
+
+      // Fix common JSON formatting issues from LLM
+      // Replace literal \n in strings with actual newlines
+      jsonString = jsonString.replace(/\\\\n/g, '\\n');
+
+      // Try to parse with JSONrepair-like cleanup
+      try {
+        parsedBlocks = JSON.parse(jsonString);
+      } catch (firstError) {
+        console.log("First parse failed, attempting cleanup...");
+
+        // More aggressive cleanup: parse string manually
+        const blockMatches = jsonString.matchAll(/\{\s*"aspect"\s*:\s*"([^"]+)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}/gs);
+        parsedBlocks = [];
+
+        for (const match of blockMatches) {
+          const aspect = match[1];
+          let text = match[2];
+
+          // Properly decode escape sequences
+          text = text
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\r/g, '\r')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+
+          parsedBlocks.push({ aspect, text });
+        }
+
+        if (parsedBlocks.length === 0) {
+          throw firstError;
+        }
+
+        console.log("Manual parse successful, extracted blocks:", parsedBlocks.length);
+      }
+
       console.log("Successfully parsed blocks:", parsedBlocks.length);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
