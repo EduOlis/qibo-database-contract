@@ -401,7 +401,10 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     let parsedBlocks: A1Block[];
     try {
-      parsedBlocks = JSON.parse(jsonMatch[0]);
+      const jsonString = jsonMatch[0]
+        .replace(/\\n/g, '\n')
+        .replace(/\\\\/g, '\\');
+      parsedBlocks = JSON.parse(jsonString);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
       console.error("Attempted to parse:", jsonMatch[0]);
