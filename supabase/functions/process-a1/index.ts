@@ -402,12 +402,25 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     const content = await llmProvider.callAPI(systemPrompt, userPrompt);
 
-    console.log("LLM raw response:", content);
+    console.log("LLM raw response length:", content.length);
+    console.log("First 300 chars:", content.substring(0, 300));
 
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    let cleanedContent = content.trim();
+
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '');
+    }
+    if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, '');
+    }
+    if (cleanedContent.endsWith('```')) {
+      cleanedContent = cleanedContent.replace(/\s*```$/, '');
+    }
+
+    const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.error("Failed to extract JSON from LLM response");
-      throw new Error(`Invalid response format from LLM. Response preview: ${content.substring(0, 500)}`);
+      throw new Error(`Invalid response format from LLM. Response preview: ${cleanedContent.substring(0, 500)}`);
     }
 
     let parsedBlocks: A1Block[];
