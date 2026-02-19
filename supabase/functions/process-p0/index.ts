@@ -69,6 +69,46 @@ async function chunkText(text: string, minChunkSize: number = 1000, maxChunkSize
   let currentChunk = '';
 
   for (const paragraph of paragraphs) {
+    if (paragraph.length > maxChunkSize) {
+      if (currentChunk.trim().length > 0) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      }
+
+      const sentences = paragraph.split(/([.!?]+\s+)/);
+      let tempChunk = '';
+
+      for (const sentence of sentences) {
+        if (tempChunk.length + sentence.length > maxChunkSize && tempChunk.length >= minChunkSize) {
+          chunks.push(tempChunk.trim());
+          tempChunk = sentence;
+        } else if (tempChunk.length + sentence.length > maxChunkSize) {
+          const words = (tempChunk + sentence).split(/\s+/);
+          let wordChunk = '';
+
+          for (const word of words) {
+            if (wordChunk.length + word.length + 1 > maxChunkSize && wordChunk.length >= minChunkSize) {
+              chunks.push(wordChunk.trim());
+              wordChunk = word;
+            } else {
+              wordChunk += (wordChunk.length > 0 ? ' ' : '') + word;
+            }
+          }
+
+          if (wordChunk.trim().length > 0) {
+            tempChunk = wordChunk;
+          }
+        } else {
+          tempChunk += sentence;
+        }
+      }
+
+      if (tempChunk.trim().length > 0) {
+        currentChunk = tempChunk;
+      }
+      continue;
+    }
+
     const potentialLength = currentChunk.length + paragraph.length + (currentChunk.length > 0 ? 2 : 0);
 
     if (potentialLength > maxChunkSize && currentChunk.length >= minChunkSize) {
