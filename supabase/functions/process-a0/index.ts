@@ -210,7 +210,8 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .in("id", chunkIds)
         .eq("processed", false)
-        .eq("skip_processing", false);
+        .eq("skip_processing", false)
+        .limit(1);
 
       if (error) {
         throw new Error(`Failed to fetch chunks: ${error.message}`);

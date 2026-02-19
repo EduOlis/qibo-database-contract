@@ -66,41 +66,82 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
     }
 
     setProcessing(true);
+    let totalEvidences = 0;
+    let processedCount = 0;
+    let failedCount = 0;
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a0`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sourceId: sourceId,
-          profileId: 'a0-basic-v1',
-          chunkIds: chunksToProcess,
-        }),
-      });
+      if (chunksToProcess) {
+        for (const chunkId of chunksToProcess) {
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                chunkId: chunkId,
+                profileId: 'a0-basic-v1',
+              }),
+            });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: response.statusText }));
-        console.error('Erro da API:', errorData);
-        throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: response.statusText }));
+              console.error(`Erro ao processar chunk ${chunkId}:`, errorData);
+              failedCount++;
+              continue;
+            }
+
+            const data = await response.json();
+            totalEvidences += data.evidencesCreated || 0;
+            processedCount++;
+
+            await loadData();
+          } catch (chunkError) {
+            console.error(`Erro ao processar chunk ${chunkId}:`, chunkError);
+            failedCount++;
+          }
+        }
+      } else {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourceId: sourceId,
+            profileId: 'a0-basic-v1',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        totalEvidences = data.evidencesCreated || 0;
+        processedCount = data.chunksProcessed || 0;
       }
 
-      const data = await response.json();
-      console.log('Resposta da API:', data);
+      const message = failedCount > 0
+        ? `Processamento concluído!\n${processedCount} chunks processados com sucesso\n${failedCount} chunks falharam\n${totalEvidences} evidências extraídas`
+        : `Sucesso! ${totalEvidences} evidências extraídas de ${processedCount} chunks`;
 
-      alert(`Sucesso! ${data.evidencesCreated} evidências extraídas de ${data.chunksProcessed} chunks`);
+      alert(message);
       setSelectedChunks(new Set());
       loadData();
     } catch (error) {
       console.error('Erro detalhado:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar';
-      alert(`Erro ao processar: ${errorMessage}`);
+      alert(`Erro ao processar: ${errorMessage}\nProcessados: ${processedCount}, Evidências: ${totalEvidences}`);
     } finally {
       setProcessing(false);
     }
