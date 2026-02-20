@@ -62,11 +62,27 @@ class GeminiProvider implements LLMProvider {
 
     const result = await response.json();
 
+    console.log("=== GEMINI API RESPONSE ===");
+    console.log("Full response:", JSON.stringify(result, null, 2));
+    console.log("Has candidates:", !!result.candidates);
+    if (result.candidates) {
+      console.log("Candidates length:", result.candidates.length);
+      console.log("First candidate:", JSON.stringify(result.candidates[0], null, 2));
+    }
+    console.log("=========================");
+
     if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+      console.error("Invalid Gemini response structure");
+      console.error("Result keys:", Object.keys(result));
       throw new Error("Invalid response format from Gemini API");
     }
 
-    return result.candidates[0].content.parts[0].text;
+    const textContent = result.candidates[0].content.parts[0].text;
+    console.log("Extracted text length:", textContent.length);
+    console.log("First 300 chars:", textContent.substring(0, 300));
+    console.log("Last 300 chars:", textContent.substring(Math.max(0, textContent.length - 300)));
+
+    return textContent;
   }
 }
 
