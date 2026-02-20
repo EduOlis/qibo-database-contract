@@ -408,8 +408,11 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
 
     const content = await llmProvider.callAPI(systemPrompt, userPrompt);
 
-    console.log("LLM raw response length:", content.length);
-    console.log("First 300 chars:", content.substring(0, 300));
+    console.log("=== LLM RESPONSE DEBUG ===");
+    console.log("Raw response length:", content.length);
+    console.log("First 500 chars:", content.substring(0, 500));
+    console.log("Last 500 chars:", content.substring(Math.max(0, content.length - 500)));
+    console.log("=========================");
 
     let cleanedContent = content.trim();
 
@@ -423,9 +426,18 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       cleanedContent = cleanedContent.replace(/\s*```$/, '');
     }
 
+    cleanedContent = cleanedContent.trim();
+
+    console.log("After cleanup - length:", cleanedContent.length);
+    console.log("After cleanup - first char:", cleanedContent[0]);
+    console.log("After cleanup - last char:", cleanedContent[cleanedContent.length - 1]);
+    console.log("After cleanup - ends with ]:", cleanedContent.endsWith(']'));
+
     const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.error("Failed to extract JSON from LLM response");
+      console.error("=== FAILED TO EXTRACT JSON ===");
+      console.error("Cleaned content length:", cleanedContent.length);
+      console.error("Cleaned content (full):", cleanedContent);
       throw new Error(`Invalid response format from LLM. Response preview: ${cleanedContent.substring(0, 500)}`);
     }
 
