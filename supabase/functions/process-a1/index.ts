@@ -205,6 +205,10 @@ Deno.serve(async (req: Request) => {
     const startTime = Date.now();
 
     const authHeader = req.headers.get("Authorization");
+    console.log("=== AUTH DEBUG ===");
+    console.log("Auth header present:", !!authHeader);
+    console.log("Auth header value:", authHeader ? authHeader.substring(0, 30) + "..." : "none");
+
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
@@ -218,6 +222,9 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    console.log("Supabase URL:", supabaseUrl);
+    console.log("Anon key present:", !!supabaseAnonKey);
+
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
@@ -226,15 +233,21 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    console.log("Calling getUser()...");
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    console.log("getUser() result - user:", !!user);
+    console.log("getUser() result - error:", userError);
+    console.log("==================");
 
     if (userError || !user) {
       console.error("Auth error:", userError);
       return new Response(
         JSON.stringify({
+          code: 401,
+          message: "Invalid JWT",
           error: "Unauthorized",
-          message: userError?.message || "Invalid JWT",
-          details: userError
+          errorMessage: userError?.message || "Invalid JWT",
+          errorDetails: userError
         }),
         {
           status: 401,
