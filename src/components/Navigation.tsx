@@ -12,6 +12,7 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
     { id: 'ingest', label: 'Ingerir Documento', icon: '📄' },
     { id: 'documents', label: 'Documentos', icon: '📚' },
     { id: 'pipeline', label: 'Pipeline', icon: '⚙️' },
+    { id: 'clusters', label: 'Clusters', icon: '🔗' },
     { id: 'entities', label: 'Entidades', icon: '🏷️' },
     { id: 'validate', label: 'Validação', icon: '✓' },
     { id: 'audit', label: 'Auditoria', icon: '🔍' },

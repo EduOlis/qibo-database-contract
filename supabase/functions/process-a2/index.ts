@@ -200,25 +200,51 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log("=== A2 CLUSTER FETCH ===");
+    console.log("Source ID:", sourceId);
+
     const { data: clusters, error: clustersError } = await supabase
       .from("kb_evidence_clusters")
       .select("*")
       .eq("source_id", sourceId)
       .eq("status", "approved");
 
+    console.log("Clusters error:", clustersError);
+    console.log("Clusters found:", clusters?.length || 0);
+
     if (clustersError) {
       throw new Error(`Failed to fetch clusters: ${clustersError.message}`);
     }
 
     if (!clusters || clusters.length === 0) {
+      console.log("No approved clusters found. Checking all clusters...");
+
+      const { data: allClusters } = await supabase
+        .from("kb_evidence_clusters")
+        .select("*")
+        .eq("source_id", sourceId);
+
+      console.log("Total clusters (all statuses):", allClusters?.length || 0);
+      if (allClusters && allClusters.length > 0) {
+        console.log("Cluster statuses:", allClusters.map(c => c.status));
+      }
+
       return new Response(
-        JSON.stringify({ message: "No approved clusters found", tensionsCreated: 0 }),
+        JSON.stringify({
+          message: "No approved clusters found. Please approve clusters first.",
+          tensionsCreated: 0,
+          debug: {
+            totalClusters: allClusters?.length || 0,
+            statuses: allClusters?.map(c => c.status) || []
+          }
+        }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+    console.log("========================");
 
     const evidenceIds = clusters.flatMap(c => c.evidence_ids);
     const { data: evidences, error: evidencesError } = await supabase

@@ -7,11 +7,12 @@ import DocumentsPage from './components/DocumentsPage'
 import ChunksPage from './components/ChunksPage'
 import EvidencesPage from './components/EvidencesPage'
 import ValidationPage from './components/ValidationPage'
+import ClustersPage from './components/ClustersPage'
 import EntitiesPage from './components/EntitiesPage'
 import PipelinePage from './components/PipelinePage'
 import Login from './components/Login'
 
-type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'validate' | 'entities' | 'pipeline' | 'audit'
+type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'clusters' | 'validate' | 'entities' | 'pipeline' | 'audit'
 
 interface PageParams {
   sourceId?: string;
@@ -81,6 +82,10 @@ function AppContent() {
           sourceId={pageParams.sourceId}
           onBack={() => handleNavigate('documents')}
         />
+      )}
+
+      {currentPage === 'clusters' && (
+        <ClustersPage />
       )}
 
       {currentPage === 'validate' && (
