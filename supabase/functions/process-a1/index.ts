@@ -482,7 +482,21 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       throw new Error(`Failed to parse LLM JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
+    console.log("=== PARSED BLOCKS VALIDATION ===");
+    console.log("parsedBlocks type:", typeof parsedBlocks);
+    console.log("Is array:", Array.isArray(parsedBlocks));
+    if (Array.isArray(parsedBlocks)) {
+      console.log("Array length:", parsedBlocks.length);
+      console.log("Array content (full):", JSON.stringify(parsedBlocks, null, 2));
+    } else {
+      console.log("Not an array! Value:", parsedBlocks);
+    }
+    console.log("================================");
+
     if (!Array.isArray(parsedBlocks) || parsedBlocks.length === 0) {
+      console.error("VALIDATION FAILED!");
+      console.error("Is array:", Array.isArray(parsedBlocks));
+      console.error("Length:", Array.isArray(parsedBlocks) ? parsedBlocks.length : "N/A");
       throw new Error("LLM returned empty or invalid block array");
     }
 
