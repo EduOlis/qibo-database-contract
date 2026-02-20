@@ -71,8 +71,11 @@ function ChunksPage({ sourceId, onBack }: ChunksPageProps) {
     let failedCount = 0;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
+      // Refresh session to get a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a0`;
 
