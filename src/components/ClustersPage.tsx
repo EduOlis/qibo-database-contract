@@ -63,6 +63,42 @@ export default function ClustersPage() {
     }
   }
 
+  async function handleApproveCluster(clusterId: string) {
+    try {
+      const { error } = await supabase
+        .from('kb_evidence_clusters')
+        .update({ status: 'approved' })
+        .eq('id', clusterId);
+
+      if (error) throw error;
+
+      alert('Cluster aprovado com sucesso!');
+      setSelectedCluster(null);
+      fetchClusters();
+    } catch (error) {
+      console.error('Error approving cluster:', error);
+      alert('Falha ao aprovar cluster');
+    }
+  }
+
+  async function handleRejectCluster(clusterId: string) {
+    try {
+      const { error } = await supabase
+        .from('kb_evidence_clusters')
+        .update({ status: 'rejected' })
+        .eq('id', clusterId);
+
+      if (error) throw error;
+
+      alert('Cluster rejeitado');
+      setSelectedCluster(null);
+      fetchClusters();
+    } catch (error) {
+      console.error('Error rejecting cluster:', error);
+      alert('Falha ao rejeitar cluster');
+    }
+  }
+
   function getStatusColor(status: string) {
     switch (status) {
       case 'pending':
@@ -315,6 +351,54 @@ export default function ClustersPage() {
                     </div>
                   </div>
                 </div>
+
+                {selectedCluster.status === 'pending' && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #e5e7eb'
+                  }}>
+                    <button
+                      onClick={() => handleApproveCluster(selectedCluster.id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                    >
+                      Aprovar Cluster
+                    </button>
+                    <button
+                      onClick={() => handleRejectCluster(selectedCluster.id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                    >
+                      Rejeitar Cluster
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
