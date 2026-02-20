@@ -497,7 +497,29 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       console.error("VALIDATION FAILED!");
       console.error("Is array:", Array.isArray(parsedBlocks));
       console.error("Length:", Array.isArray(parsedBlocks) ? parsedBlocks.length : "N/A");
-      throw new Error("LLM returned empty or invalid block array");
+
+      return new Response(
+        JSON.stringify({
+          error: "LLM returned empty or invalid block array",
+          debug: {
+            isArray: Array.isArray(parsedBlocks),
+            arrayLength: Array.isArray(parsedBlocks) ? parsedBlocks.length : 'not an array',
+            rawResponsePreview: content.substring(0, 500),
+            cleanedContentPreview: cleanedContent.substring(0, 500),
+            jsonMatchPreview: jsonMatch ? jsonMatch[0].substring(0, 500) : "NO MATCH",
+            evidencesCount: evidences.length,
+            combinedTextLength: combinedText.length,
+            combinedTextPreview: combinedText.substring(0, 300)
+          }
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     let clustersCreated = 0;
