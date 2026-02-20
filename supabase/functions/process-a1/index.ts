@@ -281,7 +281,7 @@ Deno.serve(async (req: Request) => {
       .from("kb_evidence_excerpts")
       .select("id, excerpt_text, suggested_entity_type")
       .eq("source_id", sourceId)
-      .eq("status", "pending");
+      .eq("status", "approved");
 
     if (evidencesError) {
       throw new Error(`Failed to fetch evidences: ${evidencesError.message}`);
