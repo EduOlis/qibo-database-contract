@@ -434,13 +434,23 @@ Retorne apenas o JSON com os blocos, sem explicações adicionais.`;
       let jsonString = jsonMatch[0];
 
       console.log("JSON string length:", jsonString.length);
-      console.log("First 200 chars:", jsonString.substring(0, 200));
+      console.log("First 500 chars:", jsonString.substring(0, 500));
+      console.log("Last 200 chars:", jsonString.substring(Math.max(0, jsonString.length - 200)));
+
+      const charCodes = jsonString.substring(0, 50).split('').map(c => c.charCodeAt(0));
+      console.log("First 50 char codes:", charCodes);
 
       parsedBlocks = JSON.parse(jsonString);
       console.log("Successfully parsed blocks:", parsedBlocks.length);
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      console.error("Attempted to parse (first 1000 chars):", jsonMatch[0].substring(0, 1000));
+      console.error("JSON parse error details:");
+      console.error("  Error:", parseError);
+      console.error("  Message:", parseError instanceof Error ? parseError.message : String(parseError));
+      console.error("JSON string being parsed (first 2000 chars):");
+      console.error(jsonMatch[0].substring(0, 2000));
+      console.error("JSON string being parsed (last 500 chars):");
+      console.error(jsonMatch[0].substring(Math.max(0, jsonMatch[0].length - 500)));
+
       throw new Error(`Failed to parse LLM JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
