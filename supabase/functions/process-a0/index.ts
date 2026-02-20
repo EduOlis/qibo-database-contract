@@ -19,25 +19,33 @@ const A0_SYSTEM_PROMPT = `Você é um assistente especializado em extrair trecho
 const A0_PROMPT = `Você é o agente A0 - Extração Literal de Evidências para Medicina Tradicional Chinesa (MTC).
 
 RESPONSABILIDADE EXCLUSIVA:
-Identificar e extrair substrings LITERAIS relevantes do texto fornecido, focando em: Síndromes, Sintomas, Sinais Clínicos, Princípios Terapêuticos e Acupontos.
+Identificar e extrair trechos COMPLETOS E LITERAIS do texto fornecido que descrevem: Síndromes, Sintomas, Sinais Clínicos, Princípios Terapêuticos e Acupontos.
 
 REGRAS ABSOLUTAS:
 1. NUNCA parafrasear, resumir ou modificar o texto
-2. Extrair APENAS substrings que existem EXATAMENTE como aparecem no texto
-3. Cada excerpt DEVE ser uma substring literal verificável
-4. NÃO interpretar, NÃO inferir, NÃO adicionar contexto
-5. NÃO criar relações entre entidades (isso será feito posteriormente)
-6. NÃO normalizar terminologia
+2. Extrair trechos COMPLETOS que incluem o nome da entidade E seu contexto descritivo (sinais, sintomas, tratamento, etc.)
+3. Cada excerpt DEVE ser uma substring literal verificável do texto original
+4. INCLUIR todo o contexto relevante: descrições, sintomas associados, tratamentos, etc.
+5. NÃO extrair apenas títulos ou nomes isolados - SEMPRE incluir as informações descritivas que os acompanham
+6. NÃO interpretar, NÃO inferir, NÃO adicionar texto que não existe no original
+7. NÃO criar relações entre entidades (isso será feito posteriormente)
+8. NÃO normalizar terminologia
 
 TIPOS DE ENTIDADES A EXTRAIR:
-- syndrome: Padrões diagnósticos da MTC (ex: "Deficiência de Qi do Baço")
-- symptom: Sintomas subjetivos relatados pelo paciente (ex: "dor de cabeça", "tontura")
-- clinical_sign: Sinais objetivos observáveis (ex: "língua pálida", "pulso fraco")
-- acupoint: Pontos de acupuntura (ex: "Estômago 36", "E36", "Zusanli")
-- therapeutic_principle: Princípios de tratamento (ex: "tonificar o Qi", "dispersar o Calor")
+- syndrome: Padrões diagnósticos da MTC - EXTRAIR o nome da síndrome + TODA a descrição (sinais, sintomas, pulso, língua, tratamento, patologia, etiologia)
+- symptom: Sintomas subjetivos - EXTRAIR com descrição e contexto
+- clinical_sign: Sinais objetivos - EXTRAIR com características detalhadas
+- acupoint: Pontos de acupuntura - EXTRAIR com localização, indicações, funções
+- therapeutic_principle: Princípios de tratamento - EXTRAIR com explicação e aplicação
+
+IMPORTANTE: Cada excerpt deve ser um parágrafo ou seção completa que fornece informação útil sobre a entidade, não apenas seu nome.
+
+EXEMPLO DO QUE EXTRAIR:
+✓ BOM: "Deficiência do Jing do Rim Sinais e Sintomas Diminuição da visão, audição, memória e da atividade sexual, queda de cabelo, diminuição da motilidade. Pulso fino, flutuante, profundo. Língua Vários tipos. Tratamento VC4, R3, VB39, E36 Ton (Ross)"
+✗ RUIM: "Deficiência do Jing do Rim"
 
 Para cada trecho relevante identificado, extraia:
-- excerpt_text: substring LITERAL do texto original
+- excerpt_text: substring LITERAL COMPLETA do texto original (incluindo descrições, não apenas títulos)
 - suggested_entity_type: uma das opções acima
 - relevance_score: 0.0 a 1.0
 - justification: breve explicação de por que este trecho é relevante
@@ -54,10 +62,10 @@ TEXTO PARA ANÁLISE:
 Retorne um objeto JSON no formato: { "excerpts": [ ... ] }
 Exemplo: {
   "excerpts": [{
-    "excerpt_text": "Deficiência de Qi do Baço",
+    "excerpt_text": "Deficiência de Qi do Baço Sinais e Sintomas: Fadiga, falta de apetite, fezes soltas, distensão abdominal após as refeições. Pulso: fraco e vazio. Língua: pálida e com marcas de dentes. Tratamento: tonificar o Baço com E36, BP6, VC12",
     "suggested_entity_type": "syndrome",
     "relevance_score": 0.95,
-    "justification": "Menciona síndrome diagnóstica específica da MTC",
+    "justification": "Descrição completa de síndrome diagnóstica da MTC incluindo manifestações clínicas e tratamento",
     "structured_data": {
       "name_pt": "Deficiência de Qi do Baço",
       "organ_system": "Baço"
