@@ -63,13 +63,37 @@ function PipelinePage() {
     try {
       setProcessing({ ...processing, [`a1-${sourceId}`]: true });
 
-      // Refresh session to get a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !session) {
-        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      // Get current session first
+      let { data: { session } } = await supabase.auth.getSession();
+      console.log('Session atual:', session ? 'existe' : 'null');
+
+      if (!session) {
+        throw new Error('Sessão não encontrada. Por favor, faça login novamente.');
+      }
+
+      // Check if token is expired or about to expire
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+      console.log('Token expira em:', expiresAt - now, 'segundos');
+
+      // If token expires in less than 5 minutes, refresh it
+      if (expiresAt - now < 300) {
+        console.log('Renovando token...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError) {
+          console.error('Erro ao renovar sessão:', refreshError);
+          throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
+        }
+
+        if (refreshData.session) {
+          session = refreshData.session;
+          console.log('Token renovado com sucesso');
+        }
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a1`;
+      console.log('Chamando API A1 com token:', session.access_token.substring(0, 20) + '...');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -131,10 +155,28 @@ function PipelinePage() {
     try {
       setProcessing({ ...processing, [`a2-${sourceId}`]: true });
 
-      // Refresh session to get a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !session) {
-        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      // Get current session first
+      let { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Sessão não encontrada. Por favor, faça login novamente.');
+      }
+
+      // Check if token is expired or about to expire
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+
+      // If token expires in less than 5 minutes, refresh it
+      if (expiresAt - now < 300) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError) {
+          throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
+        }
+
+        if (refreshData.session) {
+          session = refreshData.session;
+        }
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a2`;

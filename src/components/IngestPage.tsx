@@ -102,10 +102,28 @@ function IngestPage({ onBack }: IngestPageProps) {
     setResult(null);
 
     try {
-      // Refresh session to get a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !session) {
-        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      // Get current session first
+      let { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Sessão não encontrada. Por favor, faça login novamente.');
+      }
+
+      // Check if token is expired or about to expire
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+
+      // If token expires in less than 5 minutes, refresh it
+      if (expiresAt - now < 300) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError) {
+          throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
+        }
+
+        if (refreshData.session) {
+          session = refreshData.session;
+        }
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-p0`;
