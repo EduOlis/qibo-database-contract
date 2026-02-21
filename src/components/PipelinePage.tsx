@@ -202,7 +202,7 @@ function PipelinePage() {
       const result = await response.json();
       console.log('A2 processado:', result);
 
-      alert(`A2 processado com sucesso! ${result.entitiesCreated || 0} entidades e ${result.relationsCreated || 0} relações criadas.`);
+      alert(`A2 processado com sucesso! ${result.tensionsCreated || 0} tensões textuais identificadas. ${result.clustersAnalyzed} clusters analisados.`);
       await loadData();
     } catch (error) {
       console.error('Erro ao processar A2:', error);
@@ -238,10 +238,10 @@ function PipelinePage() {
         marginBottom: '24px',
       }}>
         <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-          Esta página permite processar as etapas A1 (agrupamento de evidências) e A2 (extração de entidades e relações) para cada documento.
+          Esta página permite processar as etapas A1 (agrupamento de evidências) e A2 (identificação de tensões textuais) para cada documento.
         </p>
         <p style={{ fontSize: '14px', color: '#6b7280' }}>
-          <strong>Ordem de processamento:</strong> P0 (chunking) → A0 (extração de evidências) → Aprovação humana → A1 (clusters) → A2 (entidades)
+          <strong>Ordem de processamento:</strong> P0 (chunking) → A0 (extração de evidências) → Aprovação humana → A1 (clusters) → A2 (tensões textuais)
         </p>
       </div>
 
