@@ -240,9 +240,16 @@ Deno.serve(async (req: Request) => {
       JSON.stringify(clustersData, null, 2)
     );
 
+    console.log("=== CALLING LLM ===");
     const responseText = await callLLM(A2_SYSTEM_PROMPT, prompt);
+    console.log("LLM raw response:", responseText);
+
     const response = JSON.parse(responseText);
-    const tensions = response.tensions || [];
+    console.log("Parsed response:", JSON.stringify(response, null, 2));
+
+    const tensions = response.tensions || response || [];
+    console.log("Tensions array:", tensions);
+    console.log("Tensions count:", tensions.length);
 
     let totalTensions = 0;
 
