@@ -14,9 +14,11 @@ interface A2Request {
   sourceId: string;
 }
 
-const A2_SYSTEM_PROMPT = `Você é um assistente especializado em identificar tensões textuais sem interpretá-las. Retorne sempre JSON válido.`;
+const A2_SYSTEM_PROMPT = `Você é um assistente especializado em identificar tensões textuais sem interpretá-las. Retorne sempre JSON válido. SEMPRE responda em português do Brasil.`;
 
 const A2_PROMPT = `Você é o agente A2 - Organização de Tensões Textuais.
+
+IDIOMA: SEMPRE responda em PORTUGUÊS DO BRASIL. Todas as descrições, tipos e bases textuais devem estar em português.
 
 RESPONSABILIDADE EXCLUSIVA:
 Organizar e tornar visíveis tensões textuais explícitas presentes nos clusters do A1.
@@ -29,24 +31,25 @@ REGRAS ABSOLUTAS:
 5. NUNCA priorizar descrições com base em relevância clínica
 6. NUNCA introduzir conhecimento externo ao corpus
 7. Apenas ORGANIZAR e TORNAR VISÍVEIS tensões que já existem no texto
+8. SEMPRE escrever todas as descrições em PORTUGUÊS DO BRASIL
 
-Tipos de tensões permitidas:
+Tipos de tensões permitidas (mantenha os tipos em inglês, mas a descrição em português):
 - contradiction: descrições explicitamente contraditórias
 - terminology_variation: mesma entidade com termos diferentes
 - incompatibility: descrições que não podem coexistir logicamente
 - coexistence: descrições divergentes que aparecem juntas
 
 Para cada tensão identificada, retorne:
-- tension_type: tipo da tensão
-- tension_description: descrição textual neutra da tensão
+- tension_type: tipo da tensão (em inglês)
+- tension_description: descrição textual neutra da tensão (EM PORTUGUÊS)
 - cluster_ids: IDs dos clusters envolvidos
 - evidence_ids: IDs das evidências envolvidas
-- textual_basis: base textual literal da tensão
+- textual_basis: base textual literal da tensão (EM PORTUGUÊS)
 
 CLUSTERS PARA ANÁLISE:
 {clusters_data}
 
-Retorne apenas um JSON array de tensões, sem texto adicional.`;
+Retorne apenas um JSON array de tensões, sem texto adicional. LEMBRE-SE: tension_description e textual_basis devem estar em PORTUGUÊS DO BRASIL.`;
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
   const model = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
