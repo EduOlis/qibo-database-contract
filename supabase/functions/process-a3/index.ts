@@ -228,13 +228,21 @@ Deno.serve(async (req: Request) => {
 
     const callLLM = llmProvider === "openai" ? callOpenAI : callGemini;
 
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 10;
+    const MAX_EXECUTION_TIME = 45000;
     let relationsCreated = 0;
     let totalBatches = Math.ceil(entities.length / BATCH_SIZE);
+    let processedBatches = 0;
 
     console.log(`Processing ${entities.length} entities in ${totalBatches} batches`);
 
     for (let i = 0; i < entities.length; i += BATCH_SIZE) {
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime > MAX_EXECUTION_TIME) {
+        console.log(`Timeout approaching, stopping after ${processedBatches} batches`);
+        break;
+      }
+
       const batchEntities = entities.slice(i, i + BATCH_SIZE);
       const batchEvidenceIds = batchEntities.map(e => e.evidence_id);
       const batchEvidences = evidences?.filter(ev => batchEvidenceIds.includes(ev.id)) || [];
@@ -256,46 +264,52 @@ Deno.serve(async (req: Request) => {
         .replace("{entities_json}", entitiesJson)
         .replace("{evidences_json}", evidencesJson);
 
-      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+      console.log(`Processing batch ${processedBatches + 1}/${totalBatches}`);
 
-      const responseText = await callLLM(A3_SYSTEM_PROMPT, prompt, llmApiKey);
-
-      let response;
       try {
-        response = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("JSON parse error:", parseError);
-        console.error("Response text:", responseText);
-        continue;
-      }
+        const responseText = await callLLM(A3_SYSTEM_PROMPT, prompt, llmApiKey);
 
-      const relations = response.relations || [];
-
-      for (const relation of relations) {
-        const { error: insertError } = await supabaseClient
-          .from("kb_entity_relations_proposals")
-          .insert({
-            source_id: sourceId,
-            from_entity_id: relation.from_entity_id,
-            to_entity_id: relation.to_entity_id,
-            relation_type: relation.relation_type,
-            textual_evidence: relation.textual_evidence,
-            evidence_ids: relation.evidence_ids,
-            confidence_score: relation.confidence_score || 0.5,
-            extraction_rationale: relation.extraction_rationale || "",
-            status: "pending",
-            agent_version: "a3-v1.0.0",
-          });
-
-        if (!insertError) {
-          relationsCreated++;
-        } else {
-          console.error("Failed to insert relation:", insertError);
+        let response;
+        try {
+          response = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error("JSON parse error:", parseError);
+          console.error("Response text:", responseText);
+          continue;
         }
+
+        const relations = response.relations || [];
+
+        for (const relation of relations) {
+          const { error: insertError } = await supabaseClient
+            .from("kb_entity_relations_proposals")
+            .insert({
+              source_id: sourceId,
+              from_entity_id: relation.from_entity_id,
+              to_entity_id: relation.to_entity_id,
+              relation_type: relation.relation_type,
+              textual_evidence: relation.textual_evidence,
+              evidence_ids: relation.evidence_ids,
+              confidence_score: relation.confidence_score || 0.5,
+              extraction_rationale: relation.extraction_rationale || "",
+              status: "pending",
+              agent_version: "a3-v1.0.0",
+            });
+
+          if (!insertError) {
+            relationsCreated++;
+          } else {
+            console.error("Failed to insert relation:", insertError);
+          }
+        }
+
+        processedBatches++;
+      } catch (batchError) {
+        console.error(`Error processing batch ${processedBatches + 1}:`, batchError);
       }
     }
 
-    console.log(`Completed processing: ${relationsCreated} relations created`);
+    console.log(`Completed processing: ${processedBatches}/${totalBatches} batches, ${relationsCreated} relations created`);
 
     const executionTime = Date.now() - startTime;
 
