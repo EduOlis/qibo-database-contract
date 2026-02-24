@@ -28,6 +28,7 @@ function PipelinePage() {
             { count: approvedEvidences },
             { count: totalClusters },
             { count: totalEntities },
+            { count: totalRelations },
           ] = await Promise.all([
             supabase.from('kb_raw_chunks').select('*', { count: 'exact', head: true }).eq('source_id', source.id),
             supabase.from('kb_raw_chunks').select('*', { count: 'exact', head: true }).eq('source_id', source.id).eq('processed', true),
@@ -35,6 +36,7 @@ function PipelinePage() {
             supabase.from('kb_evidence_excerpts').select('*', { count: 'exact', head: true }).eq('source_id', source.id).eq('status', 'approved'),
             supabase.from('kb_evidence_clusters').select('*', { count: 'exact', head: true }).eq('source_id', source.id),
             supabase.from('kb_extracted_entities').select('*', { count: 'exact', head: true }).eq('source_id', source.id),
+            supabase.from('kb_entity_relations_proposals').select('*', { count: 'exact', head: true }).eq('source_id', source.id),
           ]);
 
           return {
@@ -46,6 +48,7 @@ function PipelinePage() {
               approvedEvidences: approvedEvidences || 0,
               totalClusters: totalClusters || 0,
               totalEntities: totalEntities || 0,
+              totalRelations: totalRelations || 0,
             },
           };
         })
@@ -212,6 +215,63 @@ function PipelinePage() {
     }
   };
 
+  const processA3 = async (sourceId: string) => {
+    try {
+      setProcessing({ ...processing, [`a3-${sourceId}`]: true });
+
+      let { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Sessão não encontrada. Por favor, faça login novamente.');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+
+      if (expiresAt - now < 300) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError) {
+          throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
+        }
+
+        if (refreshData.session) {
+          session = refreshData.session;
+        }
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a3`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          sourceId: sourceId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('A3 processado:', result);
+
+      alert(`A3 processado com sucesso! ${result.relationsCreated || 0} relações identificadas entre ${result.entitiesAnalyzed} entidades.`);
+      await loadData();
+    } catch (error) {
+      console.error('Erro ao processar A3:', error);
+      alert(`Erro ao processar A3: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setProcessing({ ...processing, [`a3-${sourceId}`]: false });
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280' }}>
@@ -238,10 +298,10 @@ function PipelinePage() {
         marginBottom: '24px',
       }}>
         <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-          Esta página permite processar as etapas A1 (agrupamento de evidências) e A2 (identificação de tensões textuais) para cada documento.
+          Esta página permite processar as etapas A1 (agrupamento de evidências), A2 (extração de entidades) e A3 (relações entre entidades) para cada documento.
         </p>
         <p style={{ fontSize: '14px', color: '#6b7280' }}>
-          <strong>Ordem de processamento:</strong> P0 (chunking) → A0 (extração de evidências) → Aprovação humana → A1 (clusters) → A2 (tensões textuais)
+          <strong>Ordem de processamento:</strong> P0 (chunking) → A0 (extração de evidências) → Aprovação humana → A1 (clusters) → A2 (entidades) → A3 (relações)
         </p>
       </div>
 
@@ -289,7 +349,7 @@ function PipelinePage() {
 
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(6, 1fr)',
+                gridTemplateColumns: 'repeat(7, 1fr)',
                 gap: '12px',
                 marginBottom: '20px',
               }}>
@@ -334,6 +394,13 @@ function PipelinePage() {
                   </div>
                   <div style={{ fontSize: '11px', color: '#6b7280' }}>Entidades</div>
                 </div>
+
+                <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+                    {source.stats.totalRelations}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6b7280' }}>Relações</div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -371,6 +438,23 @@ function PipelinePage() {
                   {processing[`a2-${source.id}`] ? 'Processando A2...' : 'Processar A2 (Entidades)'}
                 </button>
 
+                <button
+                  onClick={() => processA3(source.id)}
+                  disabled={processing[`a3-${source.id}`] || source.stats.totalEntities === 0}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backgroundColor: source.stats.totalEntities === 0 ? '#d1d5db' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: source.stats.totalEntities === 0 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {processing[`a3-${source.id}`] ? 'Processando A3...' : 'Processar A3 (Relações)'}
+                </button>
+
                 <div style={{ fontSize: '12px', color: '#6b7280', marginLeft: 'auto' }}>
                   {source.stats.approvedEvidences === 0 && (
                     <span>Aprove evidências primeiro para processar A1</span>
@@ -381,7 +465,10 @@ function PipelinePage() {
                   {source.stats.totalClusters > 0 && source.stats.totalEntities === 0 && (
                     <span>Pronto para processar A2</span>
                   )}
-                  {source.stats.totalEntities > 0 && (
+                  {source.stats.totalEntities > 0 && source.stats.totalRelations === 0 && (
+                    <span>Pronto para processar A3</span>
+                  )}
+                  {source.stats.totalRelations > 0 && (
                     <span style={{ color: '#10b981', fontWeight: '600' }}>Pipeline completo!</span>
                   )}
                 </div>
