@@ -63,7 +63,7 @@ Exemplo: {
 }`;
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  const model = Deno.env.get("LLM_MODEL") || "gemini-2.0-flash-exp";
+  const model = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
