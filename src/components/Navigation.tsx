@@ -14,6 +14,7 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
     { id: 'pipeline', label: 'Pipeline', icon: '⚙️' },
     { id: 'clusters', label: 'Clusters', icon: '🔗' },
     { id: 'entities', label: 'Entidades', icon: '🏷️' },
+    { id: 'relations', label: 'Relações', icon: '🔀' },
     { id: 'validate', label: 'Validação', icon: '✓' },
     { id: 'audit', label: 'Auditoria', icon: '🔍' },
   ];

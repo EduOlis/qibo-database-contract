@@ -9,10 +9,11 @@ import EvidencesPage from './components/EvidencesPage'
 import ValidationPage from './components/ValidationPage'
 import ClustersPage from './components/ClustersPage'
 import EntitiesPage from './components/EntitiesPage'
+import { RelationsPage } from './components/RelationsPage'
 import PipelinePage from './components/PipelinePage'
 import Login from './components/Login'
 
-type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'clusters' | 'validate' | 'entities' | 'pipeline' | 'audit'
+type Page = 'dashboard' | 'ingest' | 'documents' | 'chunks' | 'evidences' | 'clusters' | 'validate' | 'entities' | 'relations' | 'pipeline' | 'audit'
 
 interface PageParams {
   sourceId?: string;
@@ -94,6 +95,10 @@ function AppContent() {
 
       {currentPage === 'entities' && (
         <EntitiesPage onBack={() => handleNavigate('dashboard')} />
+      )}
+
+      {currentPage === 'relations' && (
+        <RelationsPage />
       )}
 
       {currentPage === 'pipeline' && (
