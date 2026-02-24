@@ -221,64 +221,81 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to fetch evidences: ${evidencesError.message}`);
     }
 
-    const entitiesJson = JSON.stringify(entities.map(e => ({
-      id: e.id,
-      type: e.entity_type,
-      label: e.entity_label,
-      data: e.entity_data,
-    })), null, 2);
-
-    const evidencesJson = JSON.stringify(evidences?.map(ev => ({
-      id: ev.id,
-      text: ev.excerpt_text,
-      type: ev.suggested_entity_type,
-    })), null, 2);
-
-    const prompt = A3_PROMPT
-      .replace("{entities_json}", entitiesJson)
-      .replace("{evidences_json}", evidencesJson);
-
     const llmProvider = Deno.env.get("LLM_PROVIDER") || "gemini";
     const llmApiKey = llmProvider === "openai"
       ? Deno.env.get("OPENAI_API_KEY")!
       : Deno.env.get("GEMINI_API_KEY")!;
 
     const callLLM = llmProvider === "openai" ? callOpenAI : callGemini;
-    const responseText = await callLLM(A3_SYSTEM_PROMPT, prompt, llmApiKey);
 
-    let response;
-    try {
-      response = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      throw new Error("Failed to parse LLM response as JSON");
-    }
-
-    const relations = response.relations || [];
+    const BATCH_SIZE = 20;
     let relationsCreated = 0;
+    let totalBatches = Math.ceil(entities.length / BATCH_SIZE);
 
-    for (const relation of relations) {
-      const { error: insertError } = await supabaseClient
-        .from("kb_entity_relations_proposals")
-        .insert({
-          source_id: sourceId,
-          from_entity_id: relation.from_entity_id,
-          to_entity_id: relation.to_entity_id,
-          relation_type: relation.relation_type,
-          textual_evidence: relation.textual_evidence,
-          evidence_ids: relation.evidence_ids,
-          confidence_score: relation.confidence_score || 0.5,
-          extraction_rationale: relation.extraction_rationale || "",
-          status: "pending",
-          agent_version: "a3-v1.0.0",
-        });
+    console.log(`Processing ${entities.length} entities in ${totalBatches} batches`);
 
-      if (!insertError) {
-        relationsCreated++;
-      } else {
-        console.error("Failed to insert relation:", insertError);
+    for (let i = 0; i < entities.length; i += BATCH_SIZE) {
+      const batchEntities = entities.slice(i, i + BATCH_SIZE);
+      const batchEvidenceIds = batchEntities.map(e => e.evidence_id);
+      const batchEvidences = evidences?.filter(ev => batchEvidenceIds.includes(ev.id)) || [];
+
+      const entitiesJson = JSON.stringify(batchEntities.map(e => ({
+        id: e.id,
+        type: e.entity_type,
+        label: e.entity_label,
+        data: e.entity_data,
+      })), null, 2);
+
+      const evidencesJson = JSON.stringify(batchEvidences.map(ev => ({
+        id: ev.id,
+        text: ev.excerpt_text,
+        type: ev.suggested_entity_type,
+      })), null, 2);
+
+      const prompt = A3_PROMPT
+        .replace("{entities_json}", entitiesJson)
+        .replace("{evidences_json}", evidencesJson);
+
+      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+
+      const responseText = await callLLM(A3_SYSTEM_PROMPT, prompt, llmApiKey);
+
+      let response;
+      try {
+        response = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        console.error("Response text:", responseText);
+        continue;
+      }
+
+      const relations = response.relations || [];
+
+      for (const relation of relations) {
+        const { error: insertError } = await supabaseClient
+          .from("kb_entity_relations_proposals")
+          .insert({
+            source_id: sourceId,
+            from_entity_id: relation.from_entity_id,
+            to_entity_id: relation.to_entity_id,
+            relation_type: relation.relation_type,
+            textual_evidence: relation.textual_evidence,
+            evidence_ids: relation.evidence_ids,
+            confidence_score: relation.confidence_score || 0.5,
+            extraction_rationale: relation.extraction_rationale || "",
+            status: "pending",
+            agent_version: "a3-v1.0.0",
+          });
+
+        if (!insertError) {
+          relationsCreated++;
+        } else {
+          console.error("Failed to insert relation:", insertError);
+        }
       }
     }
+
+    console.log(`Completed processing: ${relationsCreated} relations created`);
 
     const executionTime = Date.now() - startTime;
 
