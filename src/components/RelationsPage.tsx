@@ -139,11 +139,6 @@ export function RelationsPage() {
     }
   };
 
-  const getConfidenceColor = (score: number) => {
-    if (score >= 0.8) return 'text-green-600';
-    if (score >= 0.5) return 'text-yellow-600';
-    return 'text-red-600';
-  };
 
   if (loading) {
     return (
@@ -164,45 +159,69 @@ export function RelationsPage() {
         </p>
       </div>
 
-      <div className="mb-6 flex gap-4 flex-wrap">
-        <div className="flex gap-2">
+      <div style={{ marginBottom: '2rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem' }}>
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              fontWeight: 'bold',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: filter === 'all' ? '#2563eb' : '#e5e7eb',
+              color: filter === 'all' ? 'white' : '#374151',
+            }}
           >
             Todas ({relations.length})
           </button>
           <button
             onClick={() => setFilter('pending')}
-            className={`px-4 py-2 rounded ${
-              filter === 'pending'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              fontWeight: 'bold',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: filter === 'pending' ? '#eab308' : '#e5e7eb',
+              color: filter === 'pending' ? 'white' : '#374151',
+            }}
           >
             Pendentes
           </button>
           <button
             onClick={() => setFilter('approved')}
-            className={`px-4 py-2 rounded ${
-              filter === 'approved'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              fontWeight: 'bold',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: filter === 'approved' ? '#16a34a' : '#e5e7eb',
+              color: filter === 'approved' ? 'white' : '#374151',
+            }}
           >
             Aprovadas
           </button>
           <button
             onClick={() => setFilter('rejected')}
-            className={`px-4 py-2 rounded ${
-              filter === 'rejected'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              fontWeight: 'bold',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: filter === 'rejected' ? '#dc2626' : '#e5e7eb',
+              color: filter === 'rejected' ? 'white' : '#374151',
+            }}
           >
             Rejeitadas
           </button>
@@ -212,7 +231,13 @@ export function RelationsPage() {
           <select
             value={selectedRelationType}
             onChange={(e) => setSelectedRelationType(e.target.value)}
-            className="px-4 py-2 border rounded"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #d1d5db',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+            }}
           >
             {relationTypes.map((type) => (
               <option key={type} value={type}>
@@ -228,33 +253,49 @@ export function RelationsPage() {
           <p className="text-gray-600">Nenhuma relação encontrada</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gradient-to-r from-gray-100 to-gray-50">
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '0.75rem',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          overflow: 'auto',
+          border: '1px solid #e5e7eb'
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: 'linear-gradient(to right, #f3f4f6, #f9fafb)' }}>
               <tr>
-                <th className="px-6 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-16"></th>
-                <th className="px-6 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[180px]">Tipo de Relação</th>
-                <th className="px-6 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[200px]">Entidade Origem</th>
-                <th className="px-6 py-5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20"></th>
-                <th className="px-6 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[200px]">Entidade Destino</th>
-                <th className="px-6 py-5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-28">Confiança</th>
-                <th className="px-6 py-5 text-right text-xs font-bold text-gray-700 uppercase tracking-wider w-56">Ações</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', width: '60px' }}></th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Status</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '180px' }}>Tipo de Relação</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '180px' }}>Entidade Origem</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', width: '60px' }}></th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '180px' }}>Entidade Destino</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Confiança</th>
+                <th style={{ padding: '1.25rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '220px' }}>Ações</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody style={{ backgroundColor: 'white' }}>
               {relations.map((relation) => (
                 <>
                   <tr
                     key={relation.id}
-                    className="hover:bg-blue-50 cursor-pointer transition-all duration-150"
+                    style={{
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s',
+                      borderTop: '1px solid #e5e7eb',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     onClick={() => setExpandedRelation(expandedRelation === relation.id ? null : relation.id)}
                   >
-                    <td className="px-6 py-5">
+                    <td style={{ padding: '1.5rem' }}>
                       <svg
-                        className={`w-6 h-6 text-gray-500 transition-transform duration-200 ${
-                          expandedRelation === relation.id ? 'rotate-90' : ''
-                        }`}
+                        style={{
+                          width: '1.5rem',
+                          height: '1.5rem',
+                          color: '#6b7280',
+                          transition: 'transform 0.2s',
+                          transform: expandedRelation === relation.id ? 'rotate(90deg)' : 'rotate(0deg)',
+                        }}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -262,7 +303,7 @@ export function RelationsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </td>
-                    <td className="px-6 py-5">
+                    <td style={{ padding: '1.5rem' }}>
                       <span
                         className={`inline-flex px-4 py-1.5 rounded-full text-xs font-bold ${getStatusColor(
                           relation.status
@@ -275,51 +316,81 @@ export function RelationsPage() {
                           : 'Rejeitada'}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-semibold text-gray-900">
+                    <td style={{ padding: '1.5rem' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#111827' }}>
                         {getRelationTypeLabel(relation.relation_type)}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td style={{ padding: '1.5rem' }}>
                       <div>
-                        <div className="text-sm font-bold text-gray-900 mb-1">
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.25rem' }}>
                           {relation.from_entity?.entity_label || 'N/A'}
                         </div>
-                        <div className="text-xs text-gray-600 font-medium">
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>
                           {relation.from_entity?.entity_type || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-3xl text-blue-400 font-light">→</span>
+                    <td style={{ padding: '1.5rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '2rem', color: '#60a5fa', fontWeight: '300' }}>→</span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td style={{ padding: '1.5rem' }}>
                       <div>
-                        <div className="text-sm font-bold text-gray-900 mb-1">
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.25rem' }}>
                           {relation.to_entity?.entity_label || 'N/A'}
                         </div>
-                        <div className="text-xs text-gray-600 font-medium">
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>
                           {relation.to_entity?.entity_type || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className={`text-xl font-bold ${getConfidenceColor(relation.confidence_score)}`}>
+                    <td style={{ padding: '1.5rem', textAlign: 'center' }}>
+                      <span style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 'bold',
+                        color: relation.confidence_score >= 0.8 ? '#16a34a' : relation.confidence_score >= 0.5 ? '#eab308' : '#dc2626'
+                      }}>
                         {(relation.confidence_score * 100).toFixed(0)}%
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td style={{ padding: '1.5rem', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                       {relation.status === 'pending' && (
-                        <div className="flex justify-end gap-3">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                           <button
                             onClick={() => updateRelationStatus(relation.id, 'approved')}
-                            className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 text-sm font-bold shadow-sm hover:shadow-md transition-all duration-150"
+                            style={{
+                              padding: '0.75rem 1.5rem',
+                              backgroundColor: '#16a34a',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              fontWeight: 'bold',
+                              fontSize: '0.9rem',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
                           >
                             Aprovar
                           </button>
                           <button
                             onClick={() => updateRelationStatus(relation.id, 'rejected')}
-                            className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 text-sm font-bold shadow-sm hover:shadow-md transition-all duration-150"
+                            style={{
+                              padding: '0.75rem 1.5rem',
+                              backgroundColor: '#dc2626',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              fontWeight: 'bold',
+                              fontSize: '0.9rem',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
                           >
                             Rejeitar
                           </button>
