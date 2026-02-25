@@ -73,6 +73,9 @@ npm run test-pipeline a1 <source_id>
 
 # A2 - Tension Detection (detecta tensões/conflitos)
 npm run test-pipeline a2 <source_id>
+
+# A3 - Entity Relations (identifica relações entre entidades)
+npm run test-pipeline a3 <source_id>
 ```
 
 ### Executar Pipeline Completo
@@ -83,7 +86,7 @@ Execute todas as etapas sequencialmente:
 npm run test-pipeline full <source_id>
 ```
 
-Isso executará: P0 → A0 → A1 → A2
+Isso executará: P0 → A0 → A1 → A2 → A3
 
 ## Exemplos
 
@@ -148,12 +151,32 @@ Este script irá:
    ```bash
    npm run test-pipeline a2 <source_id>
    ```
+7. **Testar A3** (relations):
+   ```bash
+   npm run test-pipeline a3 <source_id>
+   ```
 
 Ou simplesmente:
 
 ```bash
 npm run test-pipeline full <source_id>
 ```
+
+### Validar Invariantes do A3
+
+Após executar o A3, você pode validar que todas as invariantes foram satisfeitas:
+
+```bash
+node scripts/test-a3-invariants.js <source_id>
+```
+
+Este script verifica:
+- Ausência de duplicação de relações
+- Integridade referencial (entidades aprovadas)
+- Evidências textuais presentes
+- Tipos de relação válidos
+- Scores de confiança no range correto
+- Status correto das propostas
 
 ## Autenticação
 
