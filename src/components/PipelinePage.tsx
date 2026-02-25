@@ -225,22 +225,32 @@ function PipelinePage() {
         throw new Error('Sessão não encontrada. Por favor, faça login novamente.');
       }
 
+      console.log('=== CHAMANDO A3 ===');
+      console.log('Session expires_at:', session.expires_at);
+      console.log('Token:', session.access_token.substring(0, 20) + '...');
+
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = session.expires_at || 0;
 
+      console.log('Token expira em:', expiresAt - now, 'segundos');
+
       if (expiresAt - now < 300) {
+        console.log('Renovando token...');
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
 
         if (refreshError) {
+          console.error('Erro ao renovar sessão:', refreshError);
           throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.');
         }
 
         if (refreshData.session) {
           session = refreshData.session;
+          console.log('Token renovado com sucesso');
         }
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-a3`;
+      console.log('Chamando API A3 com token:', session.access_token.substring(0, 20) + '...');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -248,7 +258,6 @@ function PipelinePage() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'X-Client-Info': 'supabase-js-web',
         },
         body: JSON.stringify({
           sourceId: sourceId,
@@ -257,7 +266,23 @@ function PipelinePage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+        console.error('=== ERRO HTTP A3 ===');
+        console.error('Status:', response.status);
+        console.error('Response body:', errorText);
+
+        let errorMessage = `Erro HTTP ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('Parsed error:', errorJson);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+          if (errorJson.details) {
+            console.error('Error details:', errorJson.details);
+          }
+        } catch (e) {
+          errorMessage = `${errorMessage}: ${errorText}`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
