@@ -22,34 +22,37 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
   return (
     <nav style={{
       backgroundColor: '#1f2937',
-      padding: '16px 0',
+      padding: '12px 0',
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      overflow: 'auto',
     }}>
       <div style={{
-        maxWidth: '1400px',
+        maxWidth: '100%',
         margin: '0 auto',
-        padding: '0 24px',
+        padding: '0 20px',
         display: 'flex',
         alignItems: 'center',
-        gap: '32px',
+        gap: '16px',
+        minWidth: 'fit-content',
       }}>
         <div style={{
-          fontSize: '20px',
+          fontSize: '16px',
           fontWeight: '700',
           color: '#ffffff',
-          marginRight: '24px',
+          whiteSpace: 'nowrap',
+          minWidth: 'fit-content',
         }}>
           Sistema de Conhecimento
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
               style={{
-                padding: '10px 16px',
-                fontSize: '14px',
+                padding: '8px 12px',
+                fontSize: '13px',
                 fontWeight: '500',
                 backgroundColor: currentPage === item.id ? '#374151' : 'transparent',
                 color: currentPage === item.id ? '#ffffff' : '#d1d5db',
@@ -58,8 +61,9 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 if (currentPage !== item.id) {
@@ -83,14 +87,15 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '16px',
-          marginLeft: 'auto'
+          gap: '12px',
+          marginLeft: '16px',
+          whiteSpace: 'nowrap',
         }}>
           {user && (
             <>
               <span style={{
                 color: '#d1d5db',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: '500'
               }}>
                 {user.email}
@@ -98,8 +103,8 @@ function Navigation({ currentPage, onNavigate }: NavigationProps) {
               <button
                 onClick={() => signOut()}
                 style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
                   fontWeight: '500',
                   backgroundColor: '#dc2626',
                   color: '#ffffff',
