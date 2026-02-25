@@ -281,6 +281,20 @@ Deno.serve(async (req: Request) => {
         const relations = response.relations || [];
 
         for (const relation of relations) {
+          const { data: existing } = await supabaseClient
+            .from("kb_entity_relations_proposals")
+            .select("id")
+            .eq("source_id", sourceId)
+            .eq("from_entity_id", relation.from_entity_id)
+            .eq("to_entity_id", relation.to_entity_id)
+            .eq("relation_type", relation.relation_type)
+            .maybeSingle();
+
+          if (existing) {
+            console.log(`Relation already exists, skipping: ${relation.from_entity_id} -> ${relation.to_entity_id} (${relation.relation_type})`);
+            continue;
+          }
+
           const { error: insertError } = await supabaseClient
             .from("kb_entity_relations_proposals")
             .insert({
