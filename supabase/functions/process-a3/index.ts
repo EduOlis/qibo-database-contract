@@ -22,7 +22,7 @@ TIPOS DE RELAÇÕES:
 - has_symptom: síndrome apresenta sintoma
 - has_clinical_sign: síndrome apresenta sinal clínico
 - treated_by_principle: síndrome/sintoma é tratada por princípio terapêutico
-- treated_by_acupoint: síndrome/sintoma/princípio é tratado por acuponto
+- treated_by_acupoint: síndrome/sintoma/princípio é tratado por acuponto (IMPORTANTE: quando o texto lista pontos de acupuntura para tratamento, criar uma relação para CADA ponto listado)
 - causes: entidade causa outra
 - alleviates: entidade alivia outra
 - contraindicated_with: entidade é contraindicada com outra
@@ -34,6 +34,9 @@ REGRAS:
 3. Não inferir relações implícitas ou usar conhecimento externo
 4. Confidence_score baseado na clareza da evidência textual
 5. Use o contexto COMPLETO dos chunks para identificar relações entre entidades
+6. **CRÍTICO**: Quando o texto lista múltiplos acupontos para tratamento (ex: "Tratamento VC4, R3, VB39, E36"), você DEVE criar uma relação separada "treated_by_acupoint" para CADA acuponto listado
+7. Busque no texto as entidades pelo seu "label" (nome). Por exemplo, se uma entidade tem label "E36 (Zusanli)", busque por "E36" ou "Zusanli" no texto
+8. Sempre que houver uma seção "Tratamento" ou similar no chunk, analise TODOS os pontos listados e crie relações para cada um
 
 ENTIDADES DISPONÍVEIS:
 {entities_json}
@@ -43,6 +46,28 @@ CONTEXTO TEXTUAL COMPLETO (CHUNKS):
 
 EVIDÊNCIAS EXTRAÍDAS (para referência):
 {evidences_json}
+
+INSTRUÇÕES DE MAPEAMENTO:
+1. Leia o texto dos chunks cuidadosamente
+2. Para cada entidade da lista, procure seu "label" no texto dos chunks
+3. Quando encontrar uma entidade no texto, veja o contexto ao redor para identificar relações
+4. Se o texto diz "Tratamento VC4, R3, VB39, E36" e existe uma síndrome no mesmo chunk, crie 4 relações separadas: uma para VC4, uma para R3, uma para VB39 e uma para E36
+5. Use os IDs das entidades para preencher from_entity_id e to_entity_id
+
+EXEMPLO CONCRETO:
+Texto: "Deficiência do Jing do Rim - Tratamento: VC4, R3, VB39, E36"
+Entidades encontradas:
+- "Deficiência do Jing do Rim" (tipo: syndrome, id: "abc")
+- "VC4" (tipo: acupoint, id: "def")
+- "R3" (tipo: acupoint, id: "ghi")
+- "VB39" (tipo: acupoint, id: "jkl")
+- "E36" (tipo: acupoint, id: "mno")
+
+Você DEVE criar 4 relações:
+1. "abc" -> "def" (treated_by_acupoint)
+2. "abc" -> "ghi" (treated_by_acupoint)
+3. "abc" -> "jkl" (treated_by_acupoint)
+4. "abc" -> "mno" (treated_by_acupoint)
 
 Analise o CONTEXTO COMPLETO dos chunks e identifique relações entre as entidades. Para cada relação encontrada, retorne:
 - from_entity_id: ID da entidade de origem
@@ -54,7 +79,7 @@ Analise o CONTEXTO COMPLETO dos chunks e identifique relações entre as entidad
 - extraction_rationale: explicação breve
 
 Retorne JSON: { "relations": [ ... ] }
-Exemplo: {
+Exemplo de resposta: {
   "relations": [{
     "from_entity_id": "uuid1",
     "to_entity_id": "uuid2",
