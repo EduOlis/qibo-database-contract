@@ -16,7 +16,7 @@ const A3_SYSTEM_PROMPT = `Você é um assistente especializado em identificar re
 const A3_PROMPT = `Você é o agente A3 - Extração de Relações entre Entidades de MTC.
 
 RESPONSABILIDADE:
-Analisar entidades extraídas e identificar relações explícitas baseadas em evidências textuais.
+Analisar entidades extraídas e identificar relações explícitas baseadas no contexto textual completo dos chunks originais.
 
 TIPOS DE RELAÇÕES:
 - has_symptom: síndrome apresenta sintoma
@@ -30,21 +30,25 @@ TIPOS DE RELAÇÕES:
 
 REGRAS:
 1. Identificar apenas relações EXPLICITAMENTE mencionadas no texto
-2. Cada relação deve ter evidência textual clara
+2. Cada relação deve ter evidência textual clara no contexto dos chunks
 3. Não inferir relações implícitas ou usar conhecimento externo
 4. Confidence_score baseado na clareza da evidência textual
+5. Use o contexto COMPLETO dos chunks para identificar relações entre entidades
 
 ENTIDADES DISPONÍVEIS:
 {entities_json}
 
-EVIDÊNCIAS TEXTUAIS:
+CONTEXTO TEXTUAL COMPLETO (CHUNKS):
+{chunks_json}
+
+EVIDÊNCIAS EXTRAÍDAS (para referência):
 {evidences_json}
 
-Analise as evidências e identifique relações entre as entidades. Para cada relação encontrada, retorne:
+Analise o CONTEXTO COMPLETO dos chunks e identifique relações entre as entidades. Para cada relação encontrada, retorne:
 - from_entity_id: ID da entidade de origem
 - to_entity_id: ID da entidade de destino
 - relation_type: tipo de relação (uma das opções acima)
-- textual_evidence: trecho literal do texto que suporta a relação
+- textual_evidence: trecho literal do texto do chunk que suporta a relação
 - evidence_ids: array de IDs das evidências que suportam
 - confidence_score: 0.0 a 1.0
 - extraction_rationale: explicação breve
@@ -58,7 +62,7 @@ Exemplo: {
     "textual_evidence": "Deficiência de Qi do Baço apresenta fadiga",
     "evidence_ids": ["uuid3"],
     "confidence_score": 0.9,
-    "extraction_rationale": "Relação direta entre síndrome e sintoma"
+    "extraction_rationale": "Relação direta entre síndrome e sintoma encontrada no contexto do chunk"
   }]
 }`;
 
@@ -229,6 +233,16 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to fetch evidences: ${evidencesError.message}`);
     }
 
+    const chunkIds = evidences?.map(e => e.chunk_id).filter(Boolean) || [];
+    const { data: chunks, error: chunksError } = await supabaseClient
+      .from("kb_raw_chunks")
+      .select("id, raw_text, sequence_number, page_reference")
+      .in("id", chunkIds);
+
+    if (chunksError) {
+      throw new Error(`Failed to fetch chunks: ${chunksError.message}`);
+    }
+
     const llmProvider = Deno.env.get("LLM_PROVIDER") || "gemini";
     const llmApiKey = llmProvider === "openai"
       ? Deno.env.get("OPENAI_API_KEY")!
@@ -254,22 +268,34 @@ Deno.serve(async (req: Request) => {
       const batchEntities = entities.slice(i, i + BATCH_SIZE);
       const batchEvidenceIds = batchEntities.map(e => e.evidence_id);
       const batchEvidences = evidences?.filter(ev => batchEvidenceIds.includes(ev.id)) || [];
+      const batchChunkIds = batchEvidences.map(ev => ev.chunk_id).filter(Boolean);
+      const batchChunks = chunks?.filter(ch => batchChunkIds.includes(ch.id)) || [];
 
       const entitiesJson = JSON.stringify(batchEntities.map(e => ({
         id: e.id,
         type: e.entity_type,
         label: e.entity_label,
         data: e.entity_data,
+        evidence_id: e.evidence_id,
+      })), null, 2);
+
+      const chunksJson = JSON.stringify(batchChunks.map(ch => ({
+        id: ch.id,
+        text: ch.raw_text,
+        sequence: ch.sequence_number,
+        page: ch.page_reference,
       })), null, 2);
 
       const evidencesJson = JSON.stringify(batchEvidences.map(ev => ({
         id: ev.id,
+        chunk_id: ev.chunk_id,
         text: ev.excerpt_text,
         type: ev.suggested_entity_type,
       })), null, 2);
 
       const prompt = A3_PROMPT
         .replace("{entities_json}", entitiesJson)
+        .replace("{chunks_json}", chunksJson)
         .replace("{evidences_json}", evidencesJson);
 
       console.log(`Processing batch ${processedBatches + 1}/${totalBatches}`);
