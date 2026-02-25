@@ -165,12 +165,18 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get("Authorization");
     const apikeyHeader = req.headers.get("apikey");
 
+    console.log("=== A3 AUTH DEBUG ===");
     console.log("Auth header present:", !!authHeader);
+    console.log("Auth header value:", authHeader ? authHeader.substring(0, 30) + "..." : "none");
     console.log("Apikey header present:", !!apikeyHeader);
 
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({
+          code: 401,
+          error: "Missing authorization header",
+          message: "Missing authorization header"
+        }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -181,6 +187,9 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    console.log("Supabase URL:", supabaseUrl);
+    console.log("Anon key present:", !!supabaseAnonKey);
+
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
@@ -189,16 +198,22 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    console.log("Calling getUser()...");
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    console.log("getUser() result - user:", !!user);
+    console.log("getUser() result - error:", userError);
 
     if (userError || !user) {
       console.error("Auth error:", userError);
       console.error("Auth header:", authHeader?.substring(0, 20) + "...");
+      console.log("==================");
       return new Response(
         JSON.stringify({
+          code: 401,
           error: "Unauthorized",
           message: userError?.message || "Invalid JWT",
-          details: userError
+          errorMessage: userError?.message || "Invalid JWT",
+          errorDetails: userError
         }),
         {
           status: 401,
@@ -208,6 +223,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("User authenticated:", user.id);
+    console.log("==================");
 
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
