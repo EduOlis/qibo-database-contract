@@ -274,11 +274,11 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to fetch evidences: ${evidencesError.message}`);
     }
 
-    const chunkIds = evidences?.map(e => e.chunk_id).filter(Boolean) || [];
-    const { data: chunks, error: chunksError } = await supabaseClient
+    const { data: allChunks, error: chunksError } = await supabaseClient
       .from("kb_raw_chunks")
       .select("id, raw_text, sequence_number, page_reference")
-      .in("id", chunkIds);
+      .eq("source_id", sourceId)
+      .order("sequence_number", { ascending: true });
 
     if (chunksError) {
       throw new Error(`Failed to fetch chunks: ${chunksError.message}`);
@@ -309,8 +309,7 @@ Deno.serve(async (req: Request) => {
       const batchEntities = entities.slice(i, i + BATCH_SIZE);
       const batchEvidenceIds = batchEntities.map(e => e.evidence_id);
       const batchEvidences = evidences?.filter(ev => batchEvidenceIds.includes(ev.id)) || [];
-      const batchChunkIds = batchEvidences.map(ev => ev.chunk_id).filter(Boolean);
-      const batchChunks = chunks?.filter(ch => batchChunkIds.includes(ch.id)) || [];
+      const batchChunks = allChunks || [];
 
       const entitiesJson = JSON.stringify(batchEntities.map(e => ({
         id: e.id,
