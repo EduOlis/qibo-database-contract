@@ -241,6 +241,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log("Fetching entities for source:", sourceId);
+
     const { data: entities, error: entitiesError } = await supabaseClient
       .from("kb_extracted_entities")
       .select("*")
@@ -438,11 +440,15 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("A3 processing error:", error);
 
+    const errorResponse = {
+      error: error instanceof Error ? error.message : "Internal server error",
+      details: error instanceof Error ? error.stack : undefined
+    };
+
+    console.error("Returning error response:", JSON.stringify(errorResponse));
+
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
-        details: error instanceof Error ? error.stack : undefined
-      }),
+      JSON.stringify(errorResponse),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
