@@ -311,7 +311,9 @@ Deno.serve(async (req: Request) => {
       const batchEntities = entities.slice(i, i + BATCH_SIZE);
       const batchEvidenceIds = batchEntities.map(e => e.evidence_id);
       const batchEvidences = evidences?.filter(ev => batchEvidenceIds.includes(ev.id)) || [];
-      const batchChunks = allChunks || [];
+
+      const relevantChunkIds = new Set(batchEvidences.map(ev => ev.chunk_id));
+      const batchChunks = allChunks?.filter(ch => relevantChunkIds.has(ch.id)) || [];
 
       const entitiesJson = JSON.stringify(batchEntities.map(e => ({
         id: e.id,
